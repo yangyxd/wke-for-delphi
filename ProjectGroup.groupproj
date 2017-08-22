@@ -1,0 +1,44 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{eeb71969-4176-4939-9ad2-16327c588b63}</ProjectGuid>
+  </PropertyGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Projects Include="demo\Project1.dproj" />
+    <Projects Include="src\YxdWekPackage.dproj" />
+  </ItemGroup>
+  <ProjectExtensions>
+    <Borland.Personality>Default.Personality</Borland.Personality>
+    <Borland.ProjectType />
+    <BorlandProject>
+  <BorlandProject xmlns=""> <Default.Personality> </Default.Personality> </BorlandProject></BorlandProject>
+  </ProjectExtensions>
+  <Target Name="YxdWekPackage">
+    <MSBuild Projects="src\YxdWekPackage.dproj" Targets="" />
+  </Target>
+  <Target Name="YxdWekPackage:Clean">
+    <MSBuild Projects="src\YxdWekPackage.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="YxdWekPackage:Make">
+    <MSBuild Projects="src\YxdWekPackage.dproj" Targets="Make" />
+  </Target>
+  <Target Name="Project1">
+    <MSBuild Projects="demo\Project1.dproj" Targets="" />
+  </Target>
+  <Target Name="Project1:Clean">
+    <MSBuild Projects="demo\Project1.dproj" Targets="Clean" />
+  </Target>
+  <Target Name="Project1:Make">
+    <MSBuild Projects="demo\Project1.dproj" Targets="Make" />
+  </Target>
+  <Target Name="Build">
+    <CallTarget Targets="YxdWekPackage;Project1" />
+  </Target>
+  <Target Name="Clean">
+    <CallTarget Targets="YxdWekPackage:Clean;Project1:Clean" />
+  </Target>
+  <Target Name="Make">
+    <CallTarget Targets="YxdWekPackage:Make;Project1:Make" />
+  </Target>
+  <Import Condition="Exists('$(MSBuildBinPath)\Borland.Group.Targets')" Project="$(MSBuildBinPath)\Borland.Group.Targets" />
+</Project>
