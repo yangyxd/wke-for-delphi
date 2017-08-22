@@ -1,6 +1,6 @@
 {*******************************************************}
 {                                                       }
-{       SQLite 助手单元                                 }
+{       Wke Browser 单元                                }
 {                                                       }
 {       版权所有 (C) 2017   by YangYxd                  }
 {                                                       }
@@ -14,6 +14,17 @@
 }
 
 unit WkeBrowser;
+
+{$IF RTLVersion>=24}
+{$LEGACYIFEND ON}
+{$IFEND}
+
+{$IF defined(FPC)}
+  {$DEFINE USEINLINE}
+{$IFEND}
+{$IF RTLVersion>=18}
+  {$DEFINE USEINLINE}
+{$IFEND}
 
 interface
 
@@ -154,7 +165,9 @@ type
     property DragKind;
     property DragMode;
     property Enabled;
+    {$IFDEF USEINLINE}
     property Padding;
+    {$ENDIF}
     property ParentBiDiMode;
     property ParentBackground;
     property ParentColor;
@@ -176,11 +189,13 @@ type
     property OnEndDrag;
     property OnEnter;
     property OnExit;
-    
+
+    {$IFDEF USEINLINE}
     property OnMouseActivate;
-    property OnMouseDown;
     property OnMouseEnter;
     property OnMouseLeave;
+    {$ENDIF}
+    property OnMouseDown;
     property OnMouseMove;
     property OnMouseUp;
     property OnResize;

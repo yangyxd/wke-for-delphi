@@ -1,6 +1,6 @@
 {*******************************************************}
 {                                                       }
-{       SQLite 助手单元                                 }
+{       Wke Lib 单元                                    }
 {                                                       }
 {       版权所有 (C) 2017   by YangYxd                  }
 {                                                       }
@@ -16,6 +16,17 @@
 unit Wke;
 
 interface
+
+{$IF RTLVersion>=24}
+{$LEGACYIFEND ON}
+{$IFEND}
+
+{$IF defined(FPC)}
+  {$DEFINE SupportInline}
+{$IFEND}
+{$IF RTLVersion>=18}
+  {$DEFINE SupportInline}
+{$IFEND}
 
 uses
   Windows, Types, SysUtils;
