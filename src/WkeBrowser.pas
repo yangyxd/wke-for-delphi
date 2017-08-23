@@ -419,7 +419,7 @@ end;
 
 procedure TWkeWebbrowser.DoTimer(Sender: TObject);
 begin
-  if Assigned(FWebView) then  
+  if Visible and Assigned(FWebView) then  
     RepaintAllNeeded;
 end;
 
