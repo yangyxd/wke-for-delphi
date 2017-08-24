@@ -45,6 +45,7 @@ type
   TLoadingFinishEvent = procedure(Sender: TObject; const AURL: string; AResult: wkeLoadingResult; const AFailedReason: string) of object;
   TWindowClosingEvent = procedure(Sender: TObject; var AResult: Boolean) of object;
   TConsoleMessageEvent= procedure(Sender: TObject; var AMessage: wkeConsoleMessage) of object;
+  TDownloadEvent = procedure(Sender: TObject; const AURL: string) of object;
 
 type
   // 当使用rmDefault使用原有的windows组件模式，rmDirect自己绘制到dui控件上
@@ -76,11 +77,13 @@ type
     FOnConfirmBox: TConfirmBoxEvent;
     FOnURLChanged: TURLChangedEvent;
     FOnConsoleMessage: TConsoleMessageEvent;
+    FOnDownload: TDownloadEvent;
 
     procedure SetUserAgent(const Value: string);
     procedure SetDefaultUrl(const Value: string);
 //    procedure OnWebBrowserPaint(Sender: CControlUI; DC: HDC; const rcPaint: TRect);
   protected
+    procedure DoDownload(const AURL: string); virtual;
     procedure DoTitleChanged(const ATitle: string); virtual;
     procedure DoURLChanged(const AURL: string); virtual;
     procedure DoPaintUpdated(DC: HDC; x, y, cx, cy: Integer); virtual;
@@ -152,7 +155,7 @@ type
     property OnWindowClosing: TWindowClosingEvent read FOnWindowClosing write FOnWindowClosing;
     property OnWindowDestroy: TNotifyEvent read FOnWindowDestroy write FOnWindowDestroy;
     property OnConsoleMessage: TConsoleMessageEvent read FOnConsoleMessage write FOnConsoleMessage;
-
+    property OnDownload: TDownloadEvent read FOnDownload write FOnDownload;
   published
     property Align;
     property Anchors;
@@ -221,6 +224,11 @@ end;
 procedure OnwkeURLChangedCallback(webView: wkeWebView; param: Pointer; url: wkeString); cdecl;
 begin
   TWkeWebbrowser(param).DoURLChanged(webView.GetString(url));
+end;
+
+procedure OnwkeDownloadCallback(webView: wkeWebView; param: Pointer; url: wkeString); cdecl;
+begin
+  TWkeWebbrowser(param).DoDownload(webView.GetString(url));
 end;
 
 procedure OnwkePaintUpdatedCallback(webView: wkeWebView; param: Pointer; DC: HDC;
@@ -384,6 +392,12 @@ begin
     FOnDocumentReady(Self);
 end;
 
+procedure TWkeWebbrowser.DoDownload(const AURL: string);
+begin
+  if Assigned(FOnDownload) then
+    FOnDownload(Self, AURL);
+end;
+
 procedure TWkeWebbrowser.DoLoadingFinish(const AURL: string;
   AResult: wkeLoadingResult; const AFailedReason: string);
 begin
@@ -520,6 +534,7 @@ begin
   FWebView.SetOnWindowDestroy(OnwkeWindowDestroyCallback, Self);
   //FWebView.SetOnDocumentReady(OnwkeDocumentReadyCallback, Self);
   FWebView.SetOnConsoleMessage(OnwkeConsoleMessageCallback, Self);
+  //FWebView.SetOnDownload(OnwkeDownloadCallback, Self);
   //FWebView.DefaultHandler(0, 0, ClientWidth, ClientHeight);
 end;
 

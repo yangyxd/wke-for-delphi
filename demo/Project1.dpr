@@ -1,7 +1,10 @@
 program Project1;
 
+{$IF RTLVersion>=24}
+{$LEGACYIFEND ON}
+{$IFEND}
+
 uses
-  ExceptionLog,
   Forms,
   Unit1 in 'Unit1.pas' {Form1};
 
@@ -10,11 +13,11 @@ uses
 begin
   {$IF RTLVersion>=18}
   ReportMemoryLeaksOnShutdown := True;
-  {$ENDIF}
+  {$IFEND}
   Application.Initialize;
   {$IF RTLVersion>=18}
   Application.MainFormOnTaskbar := True;
-  {$ENDIF}
+  {$IFEND}
   Application.CreateForm(TForm1, Form1);
   Application.Run;
 end.

@@ -268,7 +268,8 @@ type
   wkeLoadingFinishCallback = procedure(webView: wkeWebView; param: Pointer; url: wkeString; result: wkeLoadingResult; failedReason: wkeString); cdecl;
   wkeWindowClosingCallback = function(webWindow: wkeWebView; param: Pointer): Boolean; cdecl;
   wkeWindowDestroyCallback = procedure(webWindow: wkeWebView; param: Pointer); cdecl;
-
+  wkeDownloadCallback = procedure(webWindow: wkeWebView; param: Pointer; url: wkeString); cdecl;
+  
   //typedef void (*wkeConsoleMessageCallback)(wkeWebView webView, void* param, const wkeConsoleMessage* message);
   wkeConsoleMessageCallback = procedure(webView: wkeWebView; param: Pointer; var AMessage: wkeConsoleMessage); cdecl;
 
@@ -412,7 +413,7 @@ type
     procedure SetOnLoadingFinish(callback: wkeLoadingFinishCallback; param: Pointer);
     procedure SetOnWindowClosing(callback: wkeWindowClosingCallback; param: Pointer);
     procedure SetOnWindowDestroy(callback: wkeWindowDestroyCallback; param: Pointer);
-
+    procedure SetOnDownload(callback: wkeDownloadCallback; param: Pointer);
     procedure ShowWindow(show: Boolean);
     procedure EnableWindow(enable: Boolean);
     procedure MoveWindow(x: Integer; y: Integer; width: Integer; height: Integer);
@@ -616,6 +617,7 @@ var
   wkeOnCreateView: procedure(webView: wkeWebView; callback: wkeCreateViewCallback; param: Pointer); cdecl;
   wkeOnDocumentReady: procedure(webView: wkeWebView; callback: wkeDocumentReadyCallback; param: Pointer); cdecl;
   wkeOnLoadingFinish: procedure(webView: wkeWebView; callback: wkeLoadingFinishCallback; param: Pointer); cdecl;
+  wkeOnDownload: procedure(webView: wkeWebView; callback: wkeDownloadCallback; param: Pointer); cdecl;
   wkeOnConsoleMessage: procedure(webView: wkeWebView; callback: wkeConsoleMessageCallback; callbackParam: Pointer); cdecl;
   wkeCreateWebWindow: function (AType: wkeWindowType; parent: HWND; x: Integer; y: Integer; width: Integer; height: Integer): wkeWebView; cdecl;
   wkeDestroyWebWindow: procedure(webWindow: wkeWebView); cdecl;
@@ -710,6 +712,22 @@ asm
 end;
 {$ENDIF UseVcFastCall}
 
+function GetProcAddressEx(hModule: HMODULE; lpProcName: LPCSTR): FARPROC; stdcall;
+var
+  S: string;
+begin
+  Result := GetProcAddress(hModule, lpProcName);
+  if (Result = nil) then begin
+    if (StrLIComp(lpProcName, 'wkeJS', 5) = 0) then begin
+      Inc(lpProcName, 5);
+      S := 'js' + lpProcName;
+      Result := GetProcAddress(hModule, PChar(S));
+    end;
+    if Result = nil then
+      OutputDebugString(lpProcName);
+  end;
+end;
+
 function InitWke(const DllName: string = 'wke.dll'): Boolean;
 begin
   Result := True;
@@ -719,185 +737,189 @@ begin
   try
     DLLHandle := LoadLibrary(PChar(DllName));
     if DLLHandle <> 0 then begin
-      @wkeInitialize := GetProcAddress(DLLHandle, 'wkeInitialize'); //procedure(); cdecl;
-      @wkeInitializeEx := GetProcAddress(DLLHandle, 'wkeInitializeEx'); //procedure(settings: PwkeSettings); cdecl;
-      @wkeConfigure := GetProcAddress(DLLHandle, 'wkeConfigure'); //procedure(settings: PwkeSettings); cdecl;
-      @wkeFinalize := GetProcAddress(DLLHandle, 'wkeFinalize'); //procedure(); cdecl;
-      @wkeUpdate := GetProcAddress(DLLHandle, 'wkeUpdate'); //procedure(); cdecl;
-      @wkeGetVersion := GetProcAddress(DLLHandle, 'wkeGetVersion'); //function(): Integer; cdecl;
-      @wkeGetVersionString := GetProcAddress(DLLHandle, 'wkeGetVersionString'); //function(): putf8; cdecl;
-      @wkeSetFileSystem := GetProcAddress(DLLHandle, 'wkeSetFileSystem'); //procedure(pfn_open: FILE_OPEN; pfn_close: FILE_CLOSE; pfn_size: FILE_SIZE; pfn_read: FILE_READ; pfn_seek: FILE_SEEK); cdecl;
-      @wkeCreateWebView := GetProcAddress(DLLHandle, 'wkeCreateWebView'); //function(): wkeWebView; cdecl;
-      @wkeGetWebView := GetProcAddress(DLLHandle, 'wkeGetWebView'); //function (name: PAnsiChar): wkeWebView; cdecl;
-      @wkeDestroyWebView := GetProcAddress(DLLHandle, 'wkeDestroyWebView:'); //procedure(webView: wkeWebView); cdecl;
-      @wkeGetName := GetProcAddress(DLLHandle, 'wkeGetName'); //function (webView: wkeWebView): PAnsiChar; cdecl;
-      @wkeSetName := GetProcAddress(DLLHandle, 'wkeSetName'); //procedure(webView: wkeWebView; name: PAnsiChar); cdecl;
-      @wkeIsTransparent := GetProcAddress(DLLHandle, 'wkeIsTransparent'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeSetTransparent := GetProcAddress(DLLHandle, 'wkeSetTransparent'); //procedure(webView: wkeWebView; transparent: Boolean); cdecl;
-      @wkeSetUserAgent := GetProcAddress(DLLHandle, 'wkeSetUserAgent'); //procedure(webView: wkeWebView; userAgent: Putf8); cdecl;
-      @wkeSetUserAgentW := GetProcAddress(DLLHandle, 'wkeSetUserAgentW'); //procedure(webView: wkeWebView; userAgent: Pwchar_t); cdecl;
-      @wkeLoadURL := GetProcAddress(DLLHandle, 'wkeLoadURL'); //procedure(webView: wkeWebView; url: Putf8); cdecl;
-      @wkeLoadURLW := GetProcAddress(DLLHandle, 'wkeLoadURLW'); //procedure(webView: wkeWebView; url: Pwchar_t); cdecl;
-      @wkePostURL := GetProcAddress(DLLHandle, 'wkePostURL'); //procedure(wkeView: wkeWebView; url: Putf8; postData: PAnsiChar; postLen: Integer); cdecl;
-      @wkePostURLW := GetProcAddress(DLLHandle, 'wkePostURLW'); //procedure(wkeView: wkeWebView; url: Pwchar_t; postData: PAnsiChar; postLen: Integer); cdecl;
-      @wkeLoadHTML := GetProcAddress(DLLHandle, 'wkeLoadHTML'); //procedure(webView: wkeWebView; html: Putf8); cdecl;
-      @wkeLoadHTMLW := GetProcAddress(DLLHandle, 'wkeLoadHTMLW'); //procedure(webView: wkeWebView; html: Pwchar_t); cdecl;
-      @wkeLoadFile := GetProcAddress(DLLHandle, 'wkeLoadFile'); //procedure(webView: wkeWebView; filename: Putf8); cdecl;
-      @wkeLoadFileW := GetProcAddress(DLLHandle, 'wkeLoadFileW'); //procedure(webView: wkeWebView; filename: Pwchar_t); cdecl;
-      @wkeLoad := GetProcAddress(DLLHandle, 'wkeLoad'); //procedure(webView: wkeWebView; str: Putf8); cdecl;
-      @wkeLoadW := GetProcAddress(DLLHandle, 'wkeLoadW'); //procedure(webView: wkeWebView; str: Pwchar_t); cdecl;
-      @wkeIsLoading := GetProcAddress(DLLHandle, 'wkeIsLoading'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeIsLoadingSucceeded := GetProcAddress(DLLHandle, 'wkeIsLoadingSucceeded'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeIsLoadingFailed := GetProcAddress(DLLHandle, 'wkeIsLoadingFailed'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeIsLoadingCompleted := GetProcAddress(DLLHandle, 'wkeIsLoadingCompleted'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeIsDocumentReady := GetProcAddress(DLLHandle, 'wkeIsDocumentReady'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeStopLoading := GetProcAddress(DLLHandle, 'wkeStopLoading'); //procedure(webView: wkeWebView); cdecl;
-      @wkeReload := GetProcAddress(DLLHandle, 'wkeReload'); //procedure(webView: wkeWebView); cdecl;
-      @wkeGetTitle := GetProcAddress(DLLHandle, 'wkeGetTitle'); //function (webView: wkeWebView): putf8; cdecl;
-      @wkeGetTitleW := GetProcAddress(DLLHandle, 'wkeGetTitleW'); //function (webView: wkeWebView): pwchar_t; cdecl;
-      @wkeResize := GetProcAddress(DLLHandle, 'wkeResize'); //procedure(webView: wkeWebView; w: Integer; h: Integer); cdecl;
-      @wkeGetWidth := GetProcAddress(DLLHandle, 'wkeGetWidth'); //function (webView: wkeWebView): Integer; cdecl;
-      @wkeGetHeight := GetProcAddress(DLLHandle, 'wkeGetHeight'); //function (webView: wkeWebView): Integer; cdecl;
-      @wkeGetContentWidth := GetProcAddress(DLLHandle, 'wkeGetContentWidth'); //function (webView: wkeWebView): Integer; cdecl;
-      @wkeGetContentHeight := GetProcAddress(DLLHandle, 'wkeGetContentHeight'); //function (webView: wkeWebView): Integer; cdecl;
-      @wkeSetDirty := GetProcAddress(DLLHandle, 'wkeSetDirty'); //procedure(webView: wkeWebView; dirty: Boolean); cdecl;
-      @wkeIsDirty := GetProcAddress(DLLHandle, 'wkeIsDirty'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeAddDirtyArea := GetProcAddress(DLLHandle, 'wkeAddDirtyArea'); //procedure(webView: wkeWebView; x: Integer; y: Integer; w: Integer; h: Integer); cdecl;
-      @wkeLayoutIfNeeded := GetProcAddress(DLLHandle, 'wkeLayoutIfNeeded'); //procedure(webView: wkeWebView); cdecl;
-      @wkePaint := GetProcAddress(DLLHandle, 'wkePaint'); //procedure(webView: wkeWebView; bits: Pointer; bufWid: Integer; bufHei: Integer; xDst: Integer; yDst: Integer; w: Integer; h: Integer; xSrc: Integer; ySrc: Integer; bCopyAlpha: Boolean); cdecl;
-      @wkePaint := GetProcAddress(DLLHandle, 'wkePaint'); //procedure2(webView: wkeWebView; bits: Pointer; pitch: Integer); cdecl;
-      @wkeRepaintIfNeeded := GetProcAddress(DLLHandle, 'wkeRepaintIfNeeded'); //procedure(webView: wkeWebView); cdecl;
-      @wkeGetViewDC := GetProcAddress(DLLHandle, 'wkeGetViewDC'); //function (webView: wkeWebView): HDC; cdecl;
+      @wkeInitialize := GetProcAddressEx(DLLHandle, 'wkeInitialize'); //procedure(); cdecl;
+      @wkeInitializeEx := GetProcAddressEx(DLLHandle, 'wkeInitializeEx'); //procedure(settings: PwkeSettings); cdecl;
+      @wkeConfigure := GetProcAddressEx(DLLHandle, 'wkeConfigure'); //procedure(settings: PwkeSettings); cdecl;
+      @wkeFinalize := GetProcAddressEx(DLLHandle, 'wkeFinalize'); //procedure(); cdecl;
+      @wkeUpdate := GetProcAddressEx(DLLHandle, 'wkeUpdate'); //procedure(); cdecl;
+      @wkeGetVersion := GetProcAddressEx(DLLHandle, 'wkeGetVersion'); //function(): Integer; cdecl;
+      @wkeGetVersionString := GetProcAddressEx(DLLHandle, 'wkeGetVersionString'); //function(): putf8; cdecl;
+      @wkeSetFileSystem := GetProcAddressEx(DLLHandle, 'wkeSetFileSystem'); //procedure(pfn_open: FILE_OPEN; pfn_close: FILE_CLOSE; pfn_size: FILE_SIZE; pfn_read: FILE_READ; pfn_seek: FILE_SEEK); cdecl;
+      @wkeCreateWebView := GetProcAddressEx(DLLHandle, 'wkeCreateWebView'); //function(): wkeWebView; cdecl;
+      @wkeGetWebView := GetProcAddressEx(DLLHandle, 'wkeGetWebView'); //function (name: PAnsiChar): wkeWebView; cdecl;
+      @wkeDestroyWebView := GetProcAddressEx(DLLHandle, 'wkeDestroyWebView'); //procedure(webView: wkeWebView); cdecl;
+      @wkeGetName := GetProcAddressEx(DLLHandle, 'wkeGetName'); //function (webView: wkeWebView): PAnsiChar; cdecl;
+      @wkeSetName := GetProcAddressEx(DLLHandle, 'wkeSetName'); //procedure(webView: wkeWebView; name: PAnsiChar); cdecl;
+      @wkeIsTransparent := GetProcAddressEx(DLLHandle, 'wkeIsTransparent'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeSetTransparent := GetProcAddressEx(DLLHandle, 'wkeSetTransparent'); //procedure(webView: wkeWebView; transparent: Boolean); cdecl;
+      @wkeSetUserAgent := GetProcAddressEx(DLLHandle, 'wkeSetUserAgent'); //procedure(webView: wkeWebView; userAgent: Putf8); cdecl;
+      @wkeSetUserAgentW := GetProcAddressEx(DLLHandle, 'wkeSetUserAgentW'); //procedure(webView: wkeWebView; userAgent: Pwchar_t); cdecl;
+      @wkeLoadURL := GetProcAddressEx(DLLHandle, 'wkeLoadURL'); //procedure(webView: wkeWebView; url: Putf8); cdecl;
+      @wkeLoadURLW := GetProcAddressEx(DLLHandle, 'wkeLoadURLW'); //procedure(webView: wkeWebView; url: Pwchar_t); cdecl;
+      @wkePostURL := GetProcAddressEx(DLLHandle, 'wkePostURL'); //procedure(wkeView: wkeWebView; url: Putf8; postData: PAnsiChar; postLen: Integer); cdecl;
+      @wkePostURLW := GetProcAddressEx(DLLHandle, 'wkePostURLW'); //procedure(wkeView: wkeWebView; url: Pwchar_t; postData: PAnsiChar; postLen: Integer); cdecl;
+      @wkeLoadHTML := GetProcAddressEx(DLLHandle, 'wkeLoadHTML'); //procedure(webView: wkeWebView; html: Putf8); cdecl;
+      @wkeLoadHTMLW := GetProcAddressEx(DLLHandle, 'wkeLoadHTMLW'); //procedure(webView: wkeWebView; html: Pwchar_t); cdecl;
+      @wkeLoadFile := GetProcAddressEx(DLLHandle, 'wkeLoadFile'); //procedure(webView: wkeWebView; filename: Putf8); cdecl;
+      @wkeLoadFileW := GetProcAddressEx(DLLHandle, 'wkeLoadFileW'); //procedure(webView: wkeWebView; filename: Pwchar_t); cdecl;
+      @wkeLoad := GetProcAddressEx(DLLHandle, 'wkeLoad'); //procedure(webView: wkeWebView; str: Putf8); cdecl;
+      @wkeLoadW := GetProcAddressEx(DLLHandle, 'wkeLoadW'); //procedure(webView: wkeWebView; str: Pwchar_t); cdecl;
+      @wkeIsLoading := GetProcAddressEx(DLLHandle, 'wkeIsLoading'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeIsLoadingSucceeded := GetProcAddressEx(DLLHandle, 'wkeIsLoadingSucceeded'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeIsLoadingFailed := GetProcAddressEx(DLLHandle, 'wkeIsLoadingFailed'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeIsLoadingCompleted := GetProcAddressEx(DLLHandle, 'wkeIsLoadingCompleted'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeIsDocumentReady := GetProcAddressEx(DLLHandle, 'wkeIsDocumentReady'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeStopLoading := GetProcAddressEx(DLLHandle, 'wkeStopLoading'); //procedure(webView: wkeWebView); cdecl;
+      @wkeReload := GetProcAddressEx(DLLHandle, 'wkeReload'); //procedure(webView: wkeWebView); cdecl;
+      @wkeGetTitle := GetProcAddressEx(DLLHandle, 'wkeGetTitle'); //function (webView: wkeWebView): putf8; cdecl;
+      @wkeGetTitleW := GetProcAddressEx(DLLHandle, 'wkeGetTitleW'); //function (webView: wkeWebView): pwchar_t; cdecl;
+      @wkeResize := GetProcAddressEx(DLLHandle, 'wkeResize'); //procedure(webView: wkeWebView; w: Integer; h: Integer); cdecl;
+      @wkeGetWidth := GetProcAddressEx(DLLHandle, 'wkeGetWidth'); //function (webView: wkeWebView): Integer; cdecl;
+      @wkeGetHeight := GetProcAddressEx(DLLHandle, 'wkeGetHeight'); //function (webView: wkeWebView): Integer; cdecl;
+      @wkeGetContentWidth := GetProcAddressEx(DLLHandle, 'wkeGetContentWidth'); //function (webView: wkeWebView): Integer; cdecl;
+      @wkeGetContentHeight := GetProcAddressEx(DLLHandle, 'wkeGetContentHeight'); //function (webView: wkeWebView): Integer; cdecl;
+      @wkeSetDirty := GetProcAddressEx(DLLHandle, 'wkeSetDirty'); //procedure(webView: wkeWebView; dirty: Boolean); cdecl;
+      @wkeIsDirty := GetProcAddressEx(DLLHandle, 'wkeIsDirty'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeAddDirtyArea := GetProcAddressEx(DLLHandle, 'wkeAddDirtyArea'); //procedure(webView: wkeWebView; x: Integer; y: Integer; w: Integer; h: Integer); cdecl;
+      @wkeLayoutIfNeeded := GetProcAddressEx(DLLHandle, 'wkeLayoutIfNeeded'); //procedure(webView: wkeWebView); cdecl;
+      @wkePaint := GetProcAddressEx(DLLHandle, 'wkePaint'); //procedure(webView: wkeWebView; bits: Pointer; bufWid: Integer; bufHei: Integer; xDst: Integer; yDst: Integer; w: Integer; h: Integer; xSrc: Integer; ySrc: Integer; bCopyAlpha: Boolean); cdecl;
+      @wkePaint := GetProcAddressEx(DLLHandle, 'wkePaint'); //procedure2(webView: wkeWebView; bits: Pointer; pitch: Integer); cdecl;
+      @wkeRepaintIfNeeded := GetProcAddressEx(DLLHandle, 'wkeRepaintIfNeeded'); //procedure(webView: wkeWebView); cdecl;
+      @wkeGetViewDC := GetProcAddressEx(DLLHandle, 'wkeGetViewDC'); //function (webView: wkeWebView): HDC; cdecl;
 
-      @wkeSetRepaintInterval := GetProcAddress(DLLHandle, 'wkeSetRepaintInterval'); //procedure(webView: wkeWebView; ms: Integer); cdecl;
-      @wkeGetRepaintInterval := GetProcAddress(DLLHandle, 'wkeGetRepaintInterval'); //function (webView: wkeWebView): Integer; cdecl;
-      @wkeRepaintIfNeededAfterInterval := GetProcAddress(DLLHandle, 'wkeRepaintIfNeededAfterInterval'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeRepaintAllNeeded := GetProcAddress(DLLHandle, 'wkeRepaintAllNeeded'); //function(): Boolean; cdecl;
-      @wkeRunMessageLoop := GetProcAddress(DLLHandle, 'wkeRunMessageLoop'); //function (var quit: Boolean): Boolean; cdecl;
+      @wkeSetRepaintInterval := GetProcAddressEx(DLLHandle, 'wkeSetRepaintInterval'); //procedure(webView: wkeWebView; ms: Integer); cdecl;
+      @wkeGetRepaintInterval := GetProcAddressEx(DLLHandle, 'wkeGetRepaintInterval'); //function (webView: wkeWebView): Integer; cdecl;
+      @wkeRepaintIfNeededAfterInterval := GetProcAddressEx(DLLHandle, 'wkeRepaintIfNeededAfterInterval'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeRepaintAllNeeded := GetProcAddressEx(DLLHandle, 'wkeRepaintAllNeeded'); //function(): Boolean; cdecl;
+      @wkeRunMessageLoop := GetProcAddressEx(DLLHandle, 'wkeRunMessageLoop'); //function (var quit: Boolean): Boolean; cdecl;
 
-      @wkeCanGoBack := GetProcAddress(DLLHandle, 'wkeCanGoBack'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeGoBack := GetProcAddress(DLLHandle, 'wkeGoBack'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeCanGoForward := GetProcAddress(DLLHandle, 'wkeCanGoForward'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeGoForward := GetProcAddress(DLLHandle, 'wkeGoForward'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeEditorSelectAll := GetProcAddress(DLLHandle, 'wkeEditorSelectAll'); //procedure(webView: wkeWebView); cdecl;
-      @wkeEditorCopy := GetProcAddress(DLLHandle, 'wkeEditorCopy'); //procedure(webView: wkeWebView); cdecl;
-      @wkeEditorCut := GetProcAddress(DLLHandle, 'wkeEditorCut'); //procedure(webView: wkeWebView); cdecl;
-      @wkeEditorPaste := GetProcAddress(DLLHandle, 'wkeEditorPaste'); //procedure(webView: wkeWebView); cdecl;
-      @wkeEditorDelete := GetProcAddress(DLLHandle, 'wkeEditorDelete'); //procedure(webView: wkeWebView); cdecl;
-      @wkeGetCookieW := GetProcAddress(DLLHandle, 'wkeGetCookieW'); //function (webView: wkeWebView): pwchar_t; cdecl;
-      @wkeGetCookie := GetProcAddress(DLLHandle, 'wkeGetCookie'); //function (webView: wkeWebView): putf8; cdecl;
-      @wkeSetCookieEnabled := GetProcAddress(DLLHandle, 'wkeSetCookieEnabled'); //procedure(webView: wkeWebView; enable: Boolean); cdecl;
-      @wkeIsCookieEnabled := GetProcAddress(DLLHandle, 'wkeIsCookieEnabled'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeSetMediaVolume := GetProcAddress(DLLHandle, 'wkeSetMediaVolume'); //procedure(webView: wkeWebView; volume: Single); cdecl;
-      @wkeGetMediaVolume := GetProcAddress(DLLHandle, 'wkeGetMediaVolume'); //function (webView: wkeWebView): Single; cdecl;
-      @wkeFireMouseEvent := GetProcAddress(DLLHandle, 'wkeFireMouseEvent'); //function (webView: wkeWebView; AMessage: LongInt; x: Integer; y: Integer; flags: LongInt): Boolean; cdecl;
-      @wkeFireContextMenuEvent := GetProcAddress(DLLHandle, 'wkeFireContextMenuEvent'); //function (webView: wkeWebView; x: Integer; y: Integer; flags: LongInt): Boolean; cdecl;
-      @wkeFireMouseWheelEvent := GetProcAddress(DLLHandle, 'wkeFireMouseWheelEvent'); //function (webView: wkeWebView; x: Integer; y: Integer; delta: Integer; flags: LongInt): Boolean; cdecl;
-      @wkeFireKeyUpEvent := GetProcAddress(DLLHandle, 'wkeFireKeyUpEvent'); //function (webView: wkeWebView; virtualKeyCode: LongInt; flags: LongInt; systemKey: Boolean): Boolean; cdecl;
-      @wkeFireKeyDownEvent := GetProcAddress(DLLHandle, 'wkeFireKeyDownEvent'); //function (webView: wkeWebView; virtualKeyCode: LongInt; flags: LongInt; systemKey: Boolean): Boolean; cdecl;
-      @wkeFireKeyPressEvent := GetProcAddress(DLLHandle, 'wkeFireKeyPressEvent'); //function (webView: wkeWebView; charCode: LongInt; flags: LongInt; systemKey: Boolean): Boolean; cdecl;
-      @wkeSetFocus := GetProcAddress(DLLHandle, 'wkeSetFocus'); //procedure(webView: wkeWebView); cdecl;
-      @wkeKillFocus := GetProcAddress(DLLHandle, 'wkeKillFocus'); //procedure(webView: wkeWebView); cdecl;
-      @wkeGetCaretRect := GetProcAddress(DLLHandle, 'wkeGetCaretRect'); //function (webView: wkeWebView): wkeRect; cdecl;
-      @wkeRunJS := GetProcAddress(DLLHandle, 'wkeRunJS'); //function (webView: wkeWebView; script: Putf8): wkeJSValue; cdecl;
-      @wkeRunJSW := GetProcAddress(DLLHandle, 'wkeRunJSW'); //function (webView: wkeWebView; script: Pwchar_t): wkeJSValue; cdecl;
-      @wkeGlobalExec := GetProcAddress(DLLHandle, 'wkeGlobalExec'); //function (webView: wkeWebView): wkeJSState; cdecl;
-      @wkeSleep := GetProcAddress(DLLHandle, 'wkeSleep'); //procedure(webView: wkeWebView); cdecl;
-      @wkeWake := GetProcAddress(DLLHandle, 'wkeWake'); //procedure(webView: wkeWebView); cdecl;
-      @wkeIsAwake := GetProcAddress(DLLHandle, 'wkeIsAwake'); //function (webView: wkeWebView): Boolean; cdecl;
-      @wkeSetZoomFactor := GetProcAddress(DLLHandle, 'wkeSetZoomFactor'); //procedure(webView: wkeWebView; factor: Single); cdecl;
-      @wkeGetZoomFactor := GetProcAddress(DLLHandle, 'wkeGetZoomFactor'); //function (webView: wkeWebView): Single; cdecl;
-      @wkeSetEditable := GetProcAddress(DLLHandle, 'wkeSetEditable'); //procedure(webView: wkeWebView; editable: Boolean); cdecl;
-      @wkeGetString := GetProcAddress(DLLHandle, 'wkeGetString'); //function (AString: wkeString): putf8; cdecl;
-      @wkeGetStringW := GetProcAddress(DLLHandle, 'wkeGetStringW'); //function (AString: wkeString): pwchar_t; cdecl;
-      @wkeSetString := GetProcAddress(DLLHandle, 'wkeSetString'); //procedure(AString: wkeString; str: Putf8; len: size_t); cdecl;
-      @wkeSetStringW := GetProcAddress(DLLHandle, 'wkeSetStringW'); //procedure(AString: wkeString; str: Pwchar_t; len: size_t); cdecl;
-      @wkeOnTitleChanged := GetProcAddress(DLLHandle, 'wkeOnTitleChanged'); //procedure(webView: wkeWebView; callback: wkeTitleChangedCallback; callbackParam: Pointer); cdecl;
-      @wkeOnURLChanged := GetProcAddress(DLLHandle, 'wkeOnURLChanged'); //procedure(webView: wkeWebView; callback: wkeURLChangedCallback; callbackParam: Pointer); cdecl;
-      @wkeOnPaintUpdated := GetProcAddress(DLLHandle, 'wkeOnPaintUpdated'); //procedure(webView: wkeWebView; callback: wkePaintUpdatedCallback; callbackParam: Pointer); cdecl;
-      @wkeOnAlertBox := GetProcAddress(DLLHandle, 'wkeOnAlertBox'); //procedure(webView: wkeWebView; callback: wkeAlertBoxCallback; callbackParam: Pointer); cdecl;
-      @wkeOnConfirmBox := GetProcAddress(DLLHandle, 'wkeOnConfirmBox'); //procedure(webView: wkeWebView; callback: wkeConfirmBoxCallback; callbackParam: Pointer); cdecl;
-      @wkeOnPromptBox := GetProcAddress(DLLHandle, 'wkeOnPromptBox'); //procedure(webView: wkeWebView; callback: wkePromptBoxCallback; callbackParam: Pointer); cdecl;
-      @wkeOnNavigation := GetProcAddress(DLLHandle, 'wkeOnNavigation'); //procedure(webView: wkeWebView; callback: wkeNavigationCallback; param: Pointer); cdecl;
-      @wkeOnCreateView := GetProcAddress(DLLHandle, 'wkeOnCreateView'); //procedure(webView: wkeWebView; callback: wkeCreateViewCallback; param: Pointer); cdecl;
-      @wkeOnDocumentReady := GetProcAddress(DLLHandle, 'wkeOnDocumentReady'); //procedure(webView: wkeWebView; callback: wkeDocumentReadyCallback; param: Pointer); cdecl;
-      @wkeOnLoadingFinish := GetProcAddress(DLLHandle, 'wkeOnLoadingFinish'); //procedure(webView: wkeWebView; callback: wkeLoadingFinishCallback; param: Pointer); cdecl;
-      @wkeOnConsoleMessage := GetProcAddress(DLLHandle, 'wkeOnConsoleMessage'); //procedure(webView: wkeWebView; callback: wkeConsoleMessageCallback; callbackParam: Pointer); cdecl;
-      @wkeCreateWebWindow := GetProcAddress(DLLHandle, 'wkeCreateWebWindow'); //function (AType: wkeWindowType; parent: HWND; x: Integer; y: Integer; width: Integer; height: Integer): wkeWebView; cdecl;
-      @wkeDestroyWebWindow := GetProcAddress(DLLHandle, 'wkeDestroyWebWindow'); //procedure(webWindow: wkeWebView); cdecl;
-      @wkeGetWindowHandle := GetProcAddress(DLLHandle, 'wkeGetWindowHandle'); //function (webWindow: wkeWebView): HWND; cdecl;
-      @wkeOnWindowClosing := GetProcAddress(DLLHandle, 'wkeOnWindowClosing'); //procedure(webWindow: wkeWebView; callback: wkeWindowClosingCallback; param: Pointer); cdecl;
-      @wkeOnWindowDestroy := GetProcAddress(DLLHandle, 'wkeOnWindowDestroy'); //procedure(webWindow: wkeWebView; callback: wkeWindowDestroyCallback; param: Pointer); cdecl;
-      @wkeShowWindow := GetProcAddress(DLLHandle, 'wkeShowWindow'); //procedure(webWindow: wkeWebView; show: Boolean); cdecl;
-      @wkeEnableWindow := GetProcAddress(DLLHandle, 'wkeEnableWindow'); //procedure(webWindow: wkeWebView; enable: Boolean); cdecl;
-      @wkeMoveWindow := GetProcAddress(DLLHandle, 'wkeMoveWindow'); //procedure(webWindow: wkeWebView; x: Integer; y: Integer; width: Integer; height: Integer); cdecl;
-      @wkeMoveToCenter := GetProcAddress(DLLHandle, 'wkeMoveToCenter'); //procedure(webWindow: wkeWebView); cdecl;
-      @wkeResizeWindow := GetProcAddress(DLLHandle, 'wkeResizeWindow'); //procedure(webWindow: wkeWebView; width: Integer; height: Integer); cdecl;
-      @wkeSetWindowTitle := GetProcAddress(DLLHandle, 'wkeSetWindowTitle'); //procedure(webWindow: wkeWebView; title: Putf8); cdecl;
-      @wkeSetWindowTitleW := GetProcAddress(DLLHandle, 'wkeSetWindowTitleW'); //procedure(webWindow: wkeWebView; title: Pwchar_t); cdecl;
+      @wkeCanGoBack := GetProcAddressEx(DLLHandle, 'wkeCanGoBack'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeGoBack := GetProcAddressEx(DLLHandle, 'wkeGoBack'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeCanGoForward := GetProcAddressEx(DLLHandle, 'wkeCanGoForward'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeGoForward := GetProcAddressEx(DLLHandle, 'wkeGoForward'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeEditorSelectAll := GetProcAddressEx(DLLHandle, 'wkeEditorSelectAll'); //procedure(webView: wkeWebView); cdecl;
+      @wkeEditorCopy := GetProcAddressEx(DLLHandle, 'wkeEditorCopy'); //procedure(webView: wkeWebView); cdecl;
+      @wkeEditorCut := GetProcAddressEx(DLLHandle, 'wkeEditorCut'); //procedure(webView: wkeWebView); cdecl;
+      @wkeEditorPaste := GetProcAddressEx(DLLHandle, 'wkeEditorPaste'); //procedure(webView: wkeWebView); cdecl;
+      @wkeEditorDelete := GetProcAddressEx(DLLHandle, 'wkeEditorDelete'); //procedure(webView: wkeWebView); cdecl;
+      @wkeGetCookieW := GetProcAddressEx(DLLHandle, 'wkeGetCookieW'); //function (webView: wkeWebView): pwchar_t; cdecl;
+      @wkeGetCookie := GetProcAddressEx(DLLHandle, 'wkeGetCookie'); //function (webView: wkeWebView): putf8; cdecl;
+      @wkeSetCookieEnabled := GetProcAddressEx(DLLHandle, 'wkeSetCookieEnabled'); //procedure(webView: wkeWebView; enable: Boolean); cdecl;
+      @wkeIsCookieEnabled := GetProcAddressEx(DLLHandle, 'wkeIsCookieEnabled'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeSetMediaVolume := GetProcAddressEx(DLLHandle, 'wkeSetMediaVolume'); //procedure(webView: wkeWebView; volume: Single); cdecl;
+      @wkeGetMediaVolume := GetProcAddressEx(DLLHandle, 'wkeGetMediaVolume'); //function (webView: wkeWebView): Single; cdecl;
+      @wkeFireMouseEvent := GetProcAddressEx(DLLHandle, 'wkeFireMouseEvent'); //function (webView: wkeWebView; AMessage: LongInt; x: Integer; y: Integer; flags: LongInt): Boolean; cdecl;
+      @wkeFireContextMenuEvent := GetProcAddressEx(DLLHandle, 'wkeFireContextMenuEvent'); //function (webView: wkeWebView; x: Integer; y: Integer; flags: LongInt): Boolean; cdecl;
+      @wkeFireMouseWheelEvent := GetProcAddressEx(DLLHandle, 'wkeFireMouseWheelEvent'); //function (webView: wkeWebView; x: Integer; y: Integer; delta: Integer; flags: LongInt): Boolean; cdecl;
+      @wkeFireKeyUpEvent := GetProcAddressEx(DLLHandle, 'wkeFireKeyUpEvent'); //function (webView: wkeWebView; virtualKeyCode: LongInt; flags: LongInt; systemKey: Boolean): Boolean; cdecl;
+      @wkeFireKeyDownEvent := GetProcAddressEx(DLLHandle, 'wkeFireKeyDownEvent'); //function (webView: wkeWebView; virtualKeyCode: LongInt; flags: LongInt; systemKey: Boolean): Boolean; cdecl;
+      @wkeFireKeyPressEvent := GetProcAddressEx(DLLHandle, 'wkeFireKeyPressEvent'); //function (webView: wkeWebView; charCode: LongInt; flags: LongInt; systemKey: Boolean): Boolean; cdecl;
+      @wkeSetFocus := GetProcAddressEx(DLLHandle, 'wkeSetFocus'); //procedure(webView: wkeWebView); cdecl;
+      @wkeKillFocus := GetProcAddressEx(DLLHandle, 'wkeKillFocus'); //procedure(webView: wkeWebView); cdecl;
+      @wkeGetCaretRect := GetProcAddressEx(DLLHandle, 'wkeGetCaretRect'); //function (webView: wkeWebView): wkeRect; cdecl;
+      @wkeRunJS := GetProcAddressEx(DLLHandle, 'wkeRunJS'); //function (webView: wkeWebView; script: Putf8): wkeJSValue; cdecl;
+      @wkeRunJSW := GetProcAddressEx(DLLHandle, 'wkeRunJSW'); //function (webView: wkeWebView; script: Pwchar_t): wkeJSValue; cdecl;
+      @wkeGlobalExec := GetProcAddressEx(DLLHandle, 'wkeGlobalExec'); //function (webView: wkeWebView): wkeJSState; cdecl;
+      @wkeSleep := GetProcAddressEx(DLLHandle, 'wkeSleep'); //procedure(webView: wkeWebView); cdecl;
+      @wkeWake := GetProcAddressEx(DLLHandle, 'wkeWake'); //procedure(webView: wkeWebView); cdecl;
+      @wkeIsAwake := GetProcAddressEx(DLLHandle, 'wkeIsAwake'); //function (webView: wkeWebView): Boolean; cdecl;
+      @wkeSetZoomFactor := GetProcAddressEx(DLLHandle, 'wkeSetZoomFactor'); //procedure(webView: wkeWebView; factor: Single); cdecl;
+      @wkeGetZoomFactor := GetProcAddressEx(DLLHandle, 'wkeGetZoomFactor'); //function (webView: wkeWebView): Single; cdecl;
+      @wkeSetEditable := GetProcAddressEx(DLLHandle, 'wkeSetEditable'); //procedure(webView: wkeWebView; editable: Boolean); cdecl;
+      @wkeGetString := GetProcAddressEx(DLLHandle, 'wkeGetString'); //function (AString: wkeString): putf8; cdecl;
+      @wkeGetStringW := GetProcAddressEx(DLLHandle, 'wkeGetStringW'); //function (AString: wkeString): pwchar_t; cdecl;
+      @wkeSetString := GetProcAddressEx(DLLHandle, 'wkeSetString'); //procedure(AString: wkeString; str: Putf8; len: size_t); cdecl;
+      @wkeSetStringW := GetProcAddressEx(DLLHandle, 'wkeSetStringW'); //procedure(AString: wkeString; str: Pwchar_t; len: size_t); cdecl;
+      @wkeOnTitleChanged := GetProcAddressEx(DLLHandle, 'wkeOnTitleChanged'); //procedure(webView: wkeWebView; callback: wkeTitleChangedCallback; callbackParam: Pointer); cdecl;
+      @wkeOnURLChanged := GetProcAddressEx(DLLHandle, 'wkeOnURLChanged'); //procedure(webView: wkeWebView; callback: wkeURLChangedCallback; callbackParam: Pointer); cdecl;
+      @wkeOnPaintUpdated := GetProcAddressEx(DLLHandle, 'wkeOnPaintUpdated'); //procedure(webView: wkeWebView; callback: wkePaintUpdatedCallback; callbackParam: Pointer); cdecl;
+      @wkeOnAlertBox := GetProcAddressEx(DLLHandle, 'wkeOnAlertBox'); //procedure(webView: wkeWebView; callback: wkeAlertBoxCallback; callbackParam: Pointer); cdecl;
+      @wkeOnConfirmBox := GetProcAddressEx(DLLHandle, 'wkeOnConfirmBox'); //procedure(webView: wkeWebView; callback: wkeConfirmBoxCallback; callbackParam: Pointer); cdecl;
+      @wkeOnPromptBox := GetProcAddressEx(DLLHandle, 'wkeOnPromptBox'); //procedure(webView: wkeWebView; callback: wkePromptBoxCallback; callbackParam: Pointer); cdecl;
+      @wkeOnNavigation := GetProcAddressEx(DLLHandle, 'wkeOnNavigation'); //procedure(webView: wkeWebView; callback: wkeNavigationCallback; param: Pointer); cdecl;
+      @wkeOnCreateView := GetProcAddressEx(DLLHandle, 'wkeOnCreateView'); //procedure(webView: wkeWebView; callback: wkeCreateViewCallback; param: Pointer); cdecl;
+      @wkeOnDocumentReady := GetProcAddressEx(DLLHandle, 'wkeOnDocumentReady'); //procedure(webView: wkeWebView; callback: wkeDocumentReadyCallback; param: Pointer); cdecl;
+      @wkeOnLoadingFinish := GetProcAddressEx(DLLHandle, 'wkeOnLoadingFinish'); //procedure(webView: wkeWebView; callback: wkeLoadingFinishCallback; param: Pointer); cdecl;
+      @wkeOnDownload := GetProcAddressEx(DLLHandle, 'wkeOnDownload'); // void wkeOnDownload(wkeWebView webView, wkeDownloadCallback callback, void* param);
+      @wkeOnConsoleMessage := GetProcAddressEx(DLLHandle, 'wkeOnConsoleMessage'); //procedure(webView: wkeWebView; callback: wkeConsoleMessageCallback; callbackParam: Pointer); cdecl;
+      @wkeCreateWebWindow := GetProcAddressEx(DLLHandle, 'wkeCreateWebWindow'); //function (AType: wkeWindowType; parent: HWND; x: Integer; y: Integer; width: Integer; height: Integer): wkeWebView; cdecl;
+      @wkeDestroyWebWindow := GetProcAddressEx(DLLHandle, 'wkeDestroyWebWindow'); //procedure(webWindow: wkeWebView); cdecl;
+      @wkeGetWindowHandle := GetProcAddressEx(DLLHandle, 'wkeGetWindowHandle'); //function (webWindow: wkeWebView): HWND; cdecl;
+      @wkeOnWindowClosing := GetProcAddressEx(DLLHandle, 'wkeOnWindowClosing'); //procedure(webWindow: wkeWebView; callback: wkeWindowClosingCallback; param: Pointer); cdecl;
+      @wkeOnWindowDestroy := GetProcAddressEx(DLLHandle, 'wkeOnWindowDestroy'); //procedure(webWindow: wkeWebView; callback: wkeWindowDestroyCallback; param: Pointer); cdecl;
+      @wkeShowWindow := GetProcAddressEx(DLLHandle, 'wkeShowWindow'); //procedure(webWindow: wkeWebView; show: Boolean); cdecl;
+      @wkeEnableWindow := GetProcAddressEx(DLLHandle, 'wkeEnableWindow'); //procedure(webWindow: wkeWebView; enable: Boolean); cdecl;
+      @wkeMoveWindow := GetProcAddressEx(DLLHandle, 'wkeMoveWindow'); //procedure(webWindow: wkeWebView; x: Integer; y: Integer; width: Integer; height: Integer); cdecl;
+      @wkeMoveToCenter := GetProcAddressEx(DLLHandle, 'wkeMoveToCenter'); //procedure(webWindow: wkeWebView); cdecl;
+      @wkeResizeWindow := GetProcAddressEx(DLLHandle, 'wkeResizeWindow'); //procedure(webWindow: wkeWebView; width: Integer; height: Integer); cdecl;
+      @wkeSetWindowTitle := GetProcAddressEx(DLLHandle, 'wkeSetWindowTitle'); //procedure(webWindow: wkeWebView; title: Putf8); cdecl;
+      @wkeSetWindowTitleW := GetProcAddressEx(DLLHandle, 'wkeSetWindowTitleW'); //procedure(webWindow: wkeWebView; title: Pwchar_t); cdecl;
 
-      @wkeSetHostWindow := GetProcAddress(DLLHandle, 'wkeSetHostWindow'); //procedure(webWindow: wkeWebView; hostWindow: HWND); cdecl;
-      @wkeGetHostWindow := GetProcAddress(DLLHandle, 'wkeGetHostWindow'); //function (webWindow: wkeWebView): HWND; cdecl;
+      @wkeSetHostWindow := GetProcAddressEx(DLLHandle, 'wkeSetHostWindow'); //procedure(webWindow: wkeWebView; hostWindow: HWND); cdecl;
+      @wkeGetHostWindow := GetProcAddressEx(DLLHandle, 'wkeGetHostWindow'); //function (webWindow: wkeWebView): HWND; cdecl;
 
       //================================JScript============================
 
-      @wkeJSBindFunction := GetProcAddress(DLLHandle, 'wkeJSBindFunction'); //procedure(name: PAnsiChar; fn: jsNativeFunction; AArgCount: LongInt); cdecl;
-      @wkeJSBindGetter := GetProcAddress(DLLHandle, 'wkeJSBindGetter'); //procedure(name: PAnsiChar; fn: jsNativeFunction); cdecl;
-      @wkeJSBindSetter := GetProcAddress(DLLHandle, 'wkeJSBindSetter'); //procedure(name: PAnsiChar; fn: jsNativeFunction); cdecl;
-      @wkeJSParamCount := GetProcAddress(DLLHandle, 'wkeJSParamCount'); //function (es: wkeJSState): Integer; cdecl;
-      @wkeJSParamType := GetProcAddress(DLLHandle, 'wkeJSParamType'); //function (es: wkeJSState; argIdx: Integer): wkeJSType; cdecl;
-      @wkeJSParam := GetProcAddress(DLLHandle, 'wkeJSParam'); //function (es: wkeJSState; argIdx: Integer): wkeJSValue; cdecl;
-      @wkeJSTypeOf := GetProcAddress(DLLHandle, 'wkeJSTypeOf'); //function (es: wkeJSState; v: wkeJSValue): wkeJSType; cdecl;
-      @wkeJSIsNumber := GetProcAddress(DLLHandle, 'wkeJSIsNumber'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-      @wkeJSIsString := GetProcAddress(DLLHandle, 'wkeJSIsString'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-      @wkeJSIsBool := GetProcAddress(DLLHandle, 'wkeJSIsBool'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-      @wkeJSIsObject := GetProcAddress(DLLHandle, 'wkeJSIsObject'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-      @wkeJSIsFunction := GetProcAddress(DLLHandle, 'wkeJSIsFunction'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-      @wkeJSIsUndefined := GetProcAddress(DLLHandle, 'wkeJSIsUndefined'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-      @wkeJSIsNull := GetProcAddress(DLLHandle, 'wkeJSIsNull'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-      @wkeJSIsArray := GetProcAddress(DLLHandle, 'wkeJSIsArray'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-      @wkeJSIsTrue := GetProcAddress(DLLHandle, 'wkeJSIsTrue'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-      @wkeJSIsFalse := GetProcAddress(DLLHandle, 'wkeJSIsFalse'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-      @wkeJSToInt := GetProcAddress(DLLHandle, 'wkeJSToInt'); //function (es: wkeJSState; v: wkeJSValue): Integer; cdecl;
-      @wkeJSToFloat := GetProcAddress(DLLHandle, 'wkeJSToFloat'); //function (es: wkeJSState; v: wkeJSValue): Single; cdecl;
-      @wkeJSToDouble := GetProcAddress(DLLHandle, 'wkeJSToDouble'); //function (es: wkeJSState; v: wkeJSValue): Double; cdecl;
-      @wkeJSToBool := GetProcAddress(DLLHandle, 'wkeJSToBool'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-      @wkeJSToTempString := GetProcAddress(DLLHandle, 'wkeJSToTempString'); //function (es: wkeJSState; v: wkeJSValue): putf8; cdecl;
-      @wkeJSToTempStringW := GetProcAddress(DLLHandle, 'wkeJSToTempStringW'); //function (es: wkeJSState; v: wkeJSValue): pwchar_t; cdecl;
-      @wkeJSInt := GetProcAddress(DLLHandle, 'wkeJSInt'); //function (es: wkeJSState; n: Integer): wkeJSValue; cdecl;
-      @wkeJSFloat := GetProcAddress(DLLHandle, 'wkeJSFloat'); //function (es: wkeJSState; f: Single): wkeJSValue; cdecl;
-      @wkeJSDouble := GetProcAddress(DLLHandle, 'wkeJSDouble'); //function (es: wkeJSState; d: Double): wkeJSValue; cdecl;
-      @wkeJSBool := GetProcAddress(DLLHandle, 'wkeJSBool'); //function (es: wkeJSState; b: Boolean): wkeJSValue; cdecl;
-      @wkeJSUndefined := GetProcAddress(DLLHandle, 'wkeJSUndefined'); //function (es: wkeJSState): wkeJSValue; cdecl;
-      @wkeJSNull := GetProcAddress(DLLHandle, 'wkeJSNull'); //function (es: wkeJSState): wkeJSValue; cdecl;
-      @wkeJSTrue := GetProcAddress(DLLHandle, 'wkeJSTrue'); //function (es: wkeJSState): wkeJSValue; cdecl;
-      @wkeJSFalse := GetProcAddress(DLLHandle, 'wkeJSFalse'); //function (es: wkeJSState): wkeJSValue; cdecl;
-      @wkeJSString := GetProcAddress(DLLHandle, 'wkeJSString'); //function (es: wkeJSState; str: Putf8): wkeJSValue; cdecl;
-      @wkeJSStringW := GetProcAddress(DLLHandle, 'wkeJSStringW'); //function (es: wkeJSState; str: Pwchar_t): wkeJSValue; cdecl;
-      @wkeJSEmptyObject := GetProcAddress(DLLHandle, 'wkeJSEmptyObject'); //function (es: wkeJSState): wkeJSValue; cdecl;
-      @wkeJSEmptyArray := GetProcAddress(DLLHandle, 'wkeJSEmptyArray'); //function (es: wkeJSState): wkeJSValue; cdecl;
+      @wkeJSBindFunction := GetProcAddressEx(DLLHandle, 'wkeJSBindFunction'); //procedure(name: PAnsiChar; fn: jsNativeFunction; AArgCount: LongInt); cdecl;
+      @wkeJSBindGetter := GetProcAddressEx(DLLHandle, 'wkeJSBindGetter'); //procedure(name: PAnsiChar; fn: jsNativeFunction); cdecl;
+      @wkeJSBindSetter := GetProcAddressEx(DLLHandle, 'wkeJSBindSetter'); //procedure(name: PAnsiChar; fn: jsNativeFunction); cdecl;
+      @wkeJSParamCount := GetProcAddressEx(DLLHandle, 'wkeJSParamCount'); //function (es: wkeJSState): Integer; cdecl;
+      @wkeJSParamType := GetProcAddressEx(DLLHandle, 'wkeJSParamType'); //function (es: wkeJSState; argIdx: Integer): wkeJSType; cdecl;
+      @wkeJSParam := GetProcAddressEx(DLLHandle, 'wkeJSParam'); //function (es: wkeJSState; argIdx: Integer): wkeJSValue; cdecl;
+      @wkeJSTypeOf := GetProcAddressEx(DLLHandle, 'wkeJSTypeOf'); //function (es: wkeJSState; v: wkeJSValue): wkeJSType; cdecl;
+      @wkeJSIsNumber := GetProcAddressEx(DLLHandle, 'wkeJSIsNumber'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+      @wkeJSIsString := GetProcAddressEx(DLLHandle, 'wkeJSIsString'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+      @wkeJSIsBool := GetProcAddressEx(DLLHandle, 'wkeJSIsBool'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+      @wkeJSIsObject := GetProcAddressEx(DLLHandle, 'wkeJSIsObject'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+      @wkeJSIsFunction := GetProcAddressEx(DLLHandle, 'wkeJSIsFunction'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+      @wkeJSIsUndefined := GetProcAddressEx(DLLHandle, 'wkeJSIsUndefined'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+      @wkeJSIsNull := GetProcAddressEx(DLLHandle, 'wkeJSIsNull'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+      @wkeJSIsArray := GetProcAddressEx(DLLHandle, 'wkeJSIsArray'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+      @wkeJSIsTrue := GetProcAddressEx(DLLHandle, 'wkeJSIsTrue'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+      @wkeJSIsFalse := GetProcAddressEx(DLLHandle, 'wkeJSIsFalse'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+      @wkeJSToInt := GetProcAddressEx(DLLHandle, 'wkeJSToInt'); //function (es: wkeJSState; v: wkeJSValue): Integer; cdecl;
+      @wkeJSToFloat := GetProcAddressEx(DLLHandle, 'wkeJSToFloat'); //function (es: wkeJSState; v: wkeJSValue): Single; cdecl;
+      @wkeJSToDouble := GetProcAddressEx(DLLHandle, 'wkeJSToDouble'); //function (es: wkeJSState; v: wkeJSValue): Double; cdecl;
+      @wkeJSToBool := GetProcAddressEx(DLLHandle, 'wkeJSToBool'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+      @wkeJSToTempString := GetProcAddressEx(DLLHandle, 'wkeJSToTempString'); //function (es: wkeJSState; v: wkeJSValue): putf8; cdecl;
+      @wkeJSToTempStringW := GetProcAddressEx(DLLHandle, 'wkeJSToTempStringW'); //function (es: wkeJSState; v: wkeJSValue): pwchar_t; cdecl;
+      @wkeJSInt := GetProcAddressEx(DLLHandle, 'wkeJSInt'); //function (es: wkeJSState; n: Integer): wkeJSValue; cdecl;
+      @wkeJSFloat := GetProcAddressEx(DLLHandle, 'wkeJSFloat'); //function (es: wkeJSState; f: Single): wkeJSValue; cdecl;
+      @wkeJSDouble := GetProcAddressEx(DLLHandle, 'wkeJSDouble'); //function (es: wkeJSState; d: Double): wkeJSValue; cdecl;
+      @wkeJSBool := GetProcAddressEx(DLLHandle, 'wkeJSBool'); //function (es: wkeJSState; b: Boolean): wkeJSValue; cdecl;
+      @wkeJSUndefined := GetProcAddressEx(DLLHandle, 'wkeJSUndefined'); //function (es: wkeJSState): wkeJSValue; cdecl;
+      @wkeJSNull := GetProcAddressEx(DLLHandle, 'wkeJSNull'); //function (es: wkeJSState): wkeJSValue; cdecl;
+      @wkeJSTrue := GetProcAddressEx(DLLHandle, 'wkeJSTrue'); //function (es: wkeJSState): wkeJSValue; cdecl;
+      @wkeJSFalse := GetProcAddressEx(DLLHandle, 'wkeJSFalse'); //function (es: wkeJSState): wkeJSValue; cdecl;
+      @wkeJSString := GetProcAddressEx(DLLHandle, 'wkeJSString'); //function (es: wkeJSState; str: Putf8): wkeJSValue; cdecl;
+      @wkeJSStringW := GetProcAddressEx(DLLHandle, 'wkeJSStringW'); //function (es: wkeJSState; str: Pwchar_t): wkeJSValue; cdecl;
+      @wkeJSEmptyObject := GetProcAddressEx(DLLHandle, 'wkeJSEmptyObject'); //function (es: wkeJSState): wkeJSValue; cdecl;
+      @wkeJSEmptyArray := GetProcAddressEx(DLLHandle, 'wkeJSEmptyArray'); //function (es: wkeJSState): wkeJSValue; cdecl;
 
-      @wkeJSObject := GetProcAddress(DLLHandle, 'wkeJSObject'); //function (es: wkeJSState; obj: PwkeJSData): wkeJSValue; cdecl;
-      @wkeJSFunction := GetProcAddress(DLLHandle, 'wkeJSFunction'); //function (es: wkeJSState; obj: PwkeJSData): wkeJSValue; cdecl;
-      @wkeJSGetData := GetProcAddress(DLLHandle, 'wkeJSGetData'); //function (es: wkeJSState; AObject: wkeJSValue): PwkeJSData; cdecl;
-      @wkeJSGet := GetProcAddress(DLLHandle, 'wkeJSGet'); //function (es: wkeJSState; AObject: wkeJSValue; prop: PAnsiChar): wkeJSValue; cdecl;
-      @wkeJSSet := GetProcAddress(DLLHandle, 'wkeJSSet'); //procedure(es: wkeJSState; AObject: wkeJSValue; prop: PAnsiChar; v: wkeJSValue); cdecl;
-      @wkeJSGetAt := GetProcAddress(DLLHandle, 'wkeJSGetAt'); //function (es: wkeJSState; AObject: wkeJSValue; index: Integer): wkeJSValue; cdecl;
-      @wkeJSSetAt := GetProcAddress(DLLHandle, 'wkeJSSetAt'); //procedure(es: wkeJSState; AObject: wkeJSValue; index: Integer; v: wkeJSValue); cdecl;
-      @wkeJSGetLength := GetProcAddress(DLLHandle, 'wkeJSGetLength'); //function (es: wkeJSState; AObject: wkeJSValue): Integer; cdecl;
-      @wkeJSSetLength := GetProcAddress(DLLHandle, 'wkeJSSetLength'); //procedure(es: wkeJSState; AObject: wkeJSValue; length: Integer); cdecl;
-      @wkeJSGlobalObject := GetProcAddress(DLLHandle, 'wkeJSGlobalObject'); //function (es: wkeJSState): wkeJSValue; cdecl;
-      @wkeJSGetWebView := GetProcAddress(DLLHandle, 'wkeJSGetWebView'); //function (es: wkeJSState): wkeWebView; cdecl;
-      @wkeJSEval := GetProcAddress(DLLHandle, 'wkeJSEval'); //function (es: wkeJSState; str: Putf8): wkeJSValue; cdecl;
-      @wkeJSEvalW := GetProcAddress(DLLHandle, 'wkeJSEvalW'); //function (es: wkeJSState; str: Pwchar_t): wkeJSValue; cdecl;
-      @wkeJSCall := GetProcAddress(DLLHandle, 'wkeJSCall'); //function (es: wkeJSState; func: wkeJSValue; thisObject: wkeJSValue; args: PwkeJSValue; argCount: Integer): wkeJSValue; cdecl;
-      @wkeJSCallGlobal := GetProcAddress(DLLHandle, 'wkeJSCallGlobal'); //function (es: wkeJSState; func: wkeJSValue; args: PwkeJSValue; argCount: Integer): wkeJSValue; cdecl;
-      @wkeJSGetGlobal := GetProcAddress(DLLHandle, 'wkeJSGetGlobal'); //function (es: wkeJSState; prop: PAnsiChar): wkeJSValue; cdecl;
-      @wkeJSSetGlobal := GetProcAddress(DLLHandle, 'wkeJSSetGlobal'); //procedure(es: wkeJSState; prop: PAnsiChar; v: wkeJSValue); cdecl;
+      @wkeJSObject := GetProcAddressEx(DLLHandle, 'wkeJSObject'); //function (es: wkeJSState; obj: PwkeJSData): wkeJSValue; cdecl;
+      @wkeJSFunction := GetProcAddressEx(DLLHandle, 'wkeJSFunction'); //function (es: wkeJSState; obj: PwkeJSData): wkeJSValue; cdecl;
+      @wkeJSGetData := GetProcAddressEx(DLLHandle, 'wkeJSGetData'); //function (es: wkeJSState; AObject: wkeJSValue): PwkeJSData; cdecl;
+      @wkeJSGet := GetProcAddressEx(DLLHandle, 'wkeJSGet'); //function (es: wkeJSState; AObject: wkeJSValue; prop: PAnsiChar): wkeJSValue; cdecl;
+      @wkeJSSet := GetProcAddressEx(DLLHandle, 'wkeJSSet'); //procedure(es: wkeJSState; AObject: wkeJSValue; prop: PAnsiChar; v: wkeJSValue); cdecl;
+      @wkeJSGetAt := GetProcAddressEx(DLLHandle, 'wkeJSGetAt'); //function (es: wkeJSState; AObject: wkeJSValue; index: Integer): wkeJSValue; cdecl;
+      @wkeJSSetAt := GetProcAddressEx(DLLHandle, 'wkeJSSetAt'); //procedure(es: wkeJSState; AObject: wkeJSValue; index: Integer; v: wkeJSValue); cdecl;
+      @wkeJSGetLength := GetProcAddressEx(DLLHandle, 'wkeJSGetLength'); //function (es: wkeJSState; AObject: wkeJSValue): Integer; cdecl;
+      @wkeJSSetLength := GetProcAddressEx(DLLHandle, 'wkeJSSetLength'); //procedure(es: wkeJSState; AObject: wkeJSValue; length: Integer); cdecl;
+      @wkeJSGlobalObject := GetProcAddressEx(DLLHandle, 'wkeJSGlobalObject'); //function (es: wkeJSState): wkeJSValue; cdecl;
+      @wkeJSGetWebView := GetProcAddressEx(DLLHandle, 'wkeJSGetWebView'); //function (es: wkeJSState): wkeWebView; cdecl;
+      @wkeJSEval := GetProcAddressEx(DLLHandle, 'wkeJSEval'); //function (es: wkeJSState; str: Putf8): wkeJSValue; cdecl;
+      @wkeJSEvalW := GetProcAddressEx(DLLHandle, 'wkeJSEvalW'); //function (es: wkeJSState; str: Pwchar_t): wkeJSValue; cdecl;
+      @wkeJSCall := GetProcAddressEx(DLLHandle, 'wkeJSCall'); //function (es: wkeJSState; func: wkeJSValue; thisObject: wkeJSValue; args: PwkeJSValue; argCount: Integer): wkeJSValue; cdecl;
+      @wkeJSCallGlobal := GetProcAddressEx(DLLHandle, 'wkeJSCallGlobal'); //function (es: wkeJSState; func: wkeJSValue; args: PwkeJSValue; argCount: Integer): wkeJSValue; cdecl;
+      @wkeJSGetGlobal := GetProcAddressEx(DLLHandle, 'wkeJSGetGlobal'); //function (es: wkeJSState; prop: PAnsiChar): wkeJSValue; cdecl;
+      @wkeJSSetGlobal := GetProcAddressEx(DLLHandle, 'wkeJSSetGlobal'); //procedure(es: wkeJSState; prop: PAnsiChar; v: wkeJSValue); cdecl;
 
-      @wkeJSAddRef := GetProcAddress(DLLHandle, 'wkeJSAddRef'); //procedure(es: wkeJSState; v: wkeJSValue); cdecl;
-      @wkeJSReleaseRef := GetProcAddress(DLLHandle, 'wkeJSReleaseRef'); //procedure(es: wkeJSState; v: wkeJSValue); cdecl;
-      @wkeJSCollectGarbge := GetProcAddress(DLLHandle, 'wkeJSCollectGarbge'); //procedure(); cdecl;
+      @wkeJSAddRef := GetProcAddressEx(DLLHandle, 'wkeJSAddRef'); //procedure(es: wkeJSState; v: wkeJSValue); cdecl;
+      @wkeJSReleaseRef := GetProcAddressEx(DLLHandle, 'wkeJSReleaseRef'); //procedure(es: wkeJSState; v: wkeJSValue); cdecl;
+      @wkeJSCollectGarbge := GetProcAddressEx(DLLHandle, 'wkeJSCollectGarbge'); //procedure(); cdecl;
+
+      if not Assigned(@wkeGetWebView) then
+        @wkeGetWebView := @wkeJSGetWebView;
 
       if not Assigned(@wkeGetVersion) then
         Result := False
@@ -1038,11 +1060,23 @@ begin
 end;
 
 procedure wkeWebView.Load(const AStr: string);
+
+  {$IFNDEF UNICODE}
+  procedure LoadW(const AStr: WideString);
+  begin
+    wkeLoadW(Self, PWideChar(AStr))
+  end;
+  {$ENDIF}
+
 begin
   {$IFDEF UNICODE}
   wkeLoadW(Self, PChar(AStr))
   {$ELSE}
-  wkeLoad(Self, PChar({$IFDEF FPC}AStr{$ELSE}AnsiToUTf8(AStr){$ENDIF}))
+  if Assigned(@wkeLoad) then
+    wkeLoad(Self, PChar({$IFDEF FPC}AStr{$ELSE}AnsiToUTf8(AStr){$ENDIF}))
+  else if Assigned(wkeLoadW) then begin
+    LoadW(WideString(AStr));
+  end;
   {$ENDIF}
 end;
 
@@ -1179,12 +1213,16 @@ end;
 
 class function wkeWebView.RepaintAllNeeded: Boolean;
 begin
-  Result := wkeRepaintAllNeeded;
+  if Assigned(@wkeRepaintAllNeeded) then
+    Result := wkeRepaintAllNeeded
+  else
+    Result := False;
 end;
 
 procedure wkeWebView.RepaintIfNeeded;
 begin
-  wkeRepaintIfNeeded(Self);
+  if Assigned(@wkeRepaintIfNeeded) then
+    wkeRepaintIfNeeded(Self);
 end;
 
 function wkeWebView.GetViewDC: HDC;
@@ -1380,43 +1418,51 @@ end;
 
 procedure wkeWebView.SetOnTitleChanged(callback: wkeTitleChangedCallback; callbackParam: Pointer);
 begin
-  wkeOnTitleChanged(Self, callback, callbackParam);
+  if Assigned(@wkeOnTitleChanged) then
+    wkeOnTitleChanged(Self, callback, callbackParam);
 end;
 
 procedure wkeWebView.SetOnURLChanged(callback: wkeURLChangedCallback; callbackParam: Pointer);
 begin
-  wkeOnURLChanged(Self, callback, callbackParam);
+  if Assigned(@wkeOnURLChanged) then
+    wkeOnURLChanged(Self, callback, callbackParam);
 end;
 
 procedure wkeWebView.SetOnPaintUpdated(callback: wkePaintUpdatedCallback; callbackParam: Pointer);
 begin
-  wkeOnPaintUpdated(Self, callback, callbackParam);
+  if Assigned(@wkeOnPaintUpdated) then
+    wkeOnPaintUpdated(Self, callback, callbackParam);
 end;
 
 procedure wkeWebView.SetOnAlertBox(callback: wkeAlertBoxCallback; callbackParam: Pointer);
 begin
-  wkeOnAlertBox(Self, callback, callbackParam);
+  if Assigned(@wkeOnAlertBox) then
+    wkeOnAlertBox(Self, callback, callbackParam);
 end;
 
 procedure wkeWebView.SetOnConfirmBox(callback: wkeConfirmBoxCallback; callbackParam: Pointer);
 begin
-  wkeOnConfirmBox(Self, callback, callbackParam);
+  if Assigned(@wkeOnConfirmBox) then
+    wkeOnConfirmBox(Self, callback, callbackParam);
 end;
 
 procedure wkeWebView.SetOnConsoleMessage(callback: wkeConsoleMessageCallback;
   callbackParam: Pointer);
 begin
-  wkeOnConsoleMessage(Self, callback, callbackParam);
+  if Assigned(@wkeOnConsoleMessage) then
+    wkeOnConsoleMessage(Self, callback, callbackParam);
 end;
 
 procedure wkeWebView.SetOnPromptBox(callback: wkePromptBoxCallback; callbackParam: Pointer);
 begin
-  wkeOnPromptBox(Self, callback, callbackParam);
+  if Assigned(@wkeOnPromptBox) then
+    wkeOnPromptBox(Self, callback, callbackParam);
 end;
 
 procedure wkeWebView.SetOnNavigation(callback: wkeNavigationCallback; param: Pointer);
 begin
-  wkeOnNavigation(Self, callback, param);
+  if Assigned(@wkeOnNavigation) then
+    wkeOnNavigation(Self, callback, param);
 end;
 
 procedure wkeWebView.SetOnCreateView(callback: wkeCreateViewCallback; param: Pointer);
@@ -1431,7 +1477,8 @@ end;
 
 procedure wkeWebView.SetOnLoadingFinish(callback: wkeLoadingFinishCallback; param: Pointer);
 begin
-  wkeOnLoadingFinish(Self, callback, param);
+  if Assigned(@wkeOnLoadingFinish) then
+    wkeOnLoadingFinish(Self, callback, param);
 end;
 
 class function wkeWebView.CreateWebWindow(AType: wkeWindowType; parent: HWND; x: Integer; y: Integer; width: Integer; height: Integer): wkeWebView;
@@ -1451,12 +1498,14 @@ end;
 
 procedure wkeWebView.SetOnWindowClosing(callback: wkeWindowClosingCallback; param: Pointer);
 begin
-  wkeOnWindowClosing(Self, callback, param);
+  if Assigned(@wkeOnWindowClosing) then
+    wkeOnWindowClosing(Self, callback, param);
 end;
 
 procedure wkeWebView.SetOnWindowDestroy(callback: wkeWindowDestroyCallback; param: Pointer);
 begin
-  wkeOnWindowDestroy(Self, callback, param);
+  if Assigned(@wkeOnWindowDestroy) then
+    wkeOnWindowDestroy(Self, callback, param);
 end;
 
 procedure wkeWebView.ShowWindow(show: Boolean);
@@ -1491,6 +1540,13 @@ begin
   {$ELSE}
   wkeSetWindowTitle(Self, PChar({$IFDEF FPC}ATitle{$ELSE}AnsiToUtf8(ATitle){$ENDIF}));
   {$ENDIF}
+end;
+
+procedure wkeWebView.SetOnDownload(callback: wkeDownloadCallback;
+  param: Pointer);
+begin
+  if Assigned(@wkeOnDownload) then
+    wkeOnDownload(Self, callback, param);
 end;
 
 { JScript }
