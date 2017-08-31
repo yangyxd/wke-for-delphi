@@ -28,6 +28,8 @@ interface
   {$DEFINE SupportInline}
 {$IFEND}
 
+{$DEFINE UseVcFastCall}
+
 uses
   Windows, Types, SysUtils;
 
@@ -298,9 +300,10 @@ type
   //typedef jsValue (JS_CALL *jsNativeFunction) (jsExecState es);
   // 这里有两种写法，按照vc __fastcall的约定与delphi register约定的不一样
   {$IFDEF UseVcFastCall}
-  jsNativeFunction = function(es: wkeJSState): wkeJSValue;
+  jsNativeFunction = function(es: wkeJSState): wkeJSValue; cdecl;
   {$ELSE}
-  jsNativeFunction = function(p1, p2, es: wkeJSState): wkeJSValue;  // 前两个参数用来占位用
+  //jsNativeFunction = function(p1, p2, es: wkeJSState): wkeJSValue;  // 前两个参数用来占位用
+  jsNativeFunction = function(p1, p2, es: wkeJSState): wkeJSValue; cdecl;
   {$ENDIF}
 
   /// <summary>
@@ -501,6 +504,7 @@ type
     procedure AddRef(v: wkeJSValue); {$IFDEF SupportInline}inline;{$ENDIF}
     procedure ReleaseRef(v: wkeJSValue); {$IFDEF SupportInline}inline;{$ENDIF}
     procedure CollectGarbge; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function ArgToString(const wke: JScript; argIdx: Integer): string;
   end;
 
 {$IFDEF UseVcFastCall}
@@ -920,6 +924,12 @@ begin
 
       if not Assigned(@wkeGetWebView) then
         @wkeGetWebView := @wkeJSGetWebView;
+      if not Assigned(@wkeJSParam) then
+        @wkeJSParam := GetProcAddressEx(DLLHandle, 'jsArg');
+      if not Assigned(@wkeJSParamCount) then
+        @wkeJSParamCount := GetProcAddressEx(DLLHandle, 'jsArgCount');
+      if not Assigned(@wkeJSParamType) then
+        @wkeJSParamType := GetProcAddressEx(DLLHandle, 'jsArgType');
 
       if not Assigned(@wkeGetVersion) then
         Result := False
@@ -938,8 +948,7 @@ begin
     Exit;
   FreeLibrary(DLLHandle);
   DLLHandle := 0;
-end;
-
+end;    
 
 { wkeWebView }
 
@@ -1027,7 +1036,7 @@ begin
   {$IFDEF UNICODE}
   wkeLoadURLW(Self, PChar(AURL));
   {$ELSE}
-  wkeLoadURL(Self, PChar({$IFDEF FPC}AURL{$ELSE}AnsiToUtf8(AURL){$ENDIF}));
+  wkeLoadURL(Self, PChar(AURL));
   {$ENDIF}
 end;
 
@@ -1398,12 +1407,40 @@ begin
   wkeSetEditable(Self, editable);
 end;
 
+{$IFNDEF UNICODE}
+function Utf8Decode(p: PAnsiChar; l: Integer): WideString;
+var
+  ps: PByte;
+begin
+  if l<=0 then begin
+    if (p = nil) or (p^ = #0) then begin
+      Result := '';
+      Exit;
+    end; 
+    ps := PByte(p);
+    while ps^<>0 do Inc(ps);
+    l := Integer(ps) - Integer(p);
+  end;
+  SetLength(Result, l);
+  SetLength(Result, MultiByteToWideChar(CP_UTF8, 8, p, l, PWideChar(Result), l)); // 8==>MB_ERR_INVALID_CHARS
+end;
+
+function DecodeUtf8Str(const P: PAnsiChar): string;
+begin
+  try
+    Result := Utf8Decode(P, 0);
+  except
+    Result := '';
+  end;
+end;
+{$ENDIF}
+
 class function wkeWebView.GetString(AString: wkeString): string;
 begin
 {$IFDEF UNICODE}
   Result := wkeGetStringW(AString);
 {$ELSE}
-  Result := {$IFDEF FPC}wkeGetString(AString){$ELSE}Utf8ToAnsi(wkeGetString(AString)){$ENDIF};
+  Result := {$IFDEF FPC}wkeGetString(AString){$ELSE}DecodeUtf8Str(wkeGetString(AString)){$ENDIF};
 {$ENDIF}
 end;
 
@@ -1568,12 +1605,18 @@ end;
 
 function JScript.ArgCount: Integer;
 begin
-  Result := wkeJSParamCount(Self);
+  if Assigned(@wkeJSParamCount) then
+    Result := wkeJSParamCount(Self)
+  else
+    Result := 0;
 end;
 
 function JScript.ArgType(argIdx: Integer): wkeJSType;
 begin
-  Result := wkeJSParamType(Self, argIdx);
+  if Assigned(wkeJSParamType) then
+    Result := wkeJSParamType(Self, argIdx)
+  else
+    Result := JSTYPE_STRING;
 end;
 
 procedure JScript.AddRef(v: wkeJSValue);
@@ -1583,7 +1626,33 @@ end;
 
 function JScript.Arg(argIdx: Integer): wkeJSValue;
 begin
-  Result := wkeJSParam(Self, argIdx);
+  if Assigned(@wkeJSParam) then
+    Result := wkeJSParam(Self, argIdx)
+  else
+    Result := 0;
+end;
+
+class function JScript.ArgToString(const wke: JScript; argIdx: Integer): string;
+var
+  LType: wkeJSType;
+  V: wkeJSValue;
+begin
+  LType := wke.ArgType(argIdx);
+  V := wke.Arg(argIdx);
+  case LType of
+    JSTYPE_NUMBER:
+      Result := FloatToStr(wke.ToDouble(V));
+    JSTYPE_STRING:
+      Result := wke.ToTempString(V);
+    JSTYPE_BOOLEAN:
+      Result := BoolToStr(wke.ToBoolean(V));
+    JSTYPE_OBJECT:
+      Result := '(object)';
+    JSTYPE_FUNCTION:
+      Result := '(function)';
+  else
+    Result := '(undefined)';
+  end;
 end;
 
 function JScript.TypeOf(v: wkeJSValue): wkeJSType;
@@ -1663,11 +1732,11 @@ end;
 
 function JScript.ToTempString(v: wkeJSValue): string;
 begin
-{$IFDEF UNICODE}
+  {$IFDEF UNICODE}
   Result := wkeJSToTempStringW(Self, v);
-{$ELSE}
+  {$ELSE}
   Result := {$IFDEF FPC}wkeJSToTempString(Self, v){$ELSE}Utf8ToAnsi(wkeJSToTempString(Self, v)){$ENDIF};
-{$ENDIF}
+  {$ENDIF}
 end;
 
 function JScript.Int(n: Integer): wkeJSValue;
@@ -1829,6 +1898,7 @@ end;
 var
   {$IFDEF FPC}uOldFPU, {$ENDIF}uOld8087CW: Word;
 {$ENDIF}
+
 
 initialization
   InitWke();

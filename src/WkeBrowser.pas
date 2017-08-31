@@ -104,6 +104,7 @@ type
     procedure CreateWnd; override;
     procedure DestroyWnd; override;
     procedure WMEraseBkgnd(var Message: TWmEraseBkgnd); message WM_ERASEBKGND;
+    procedure WndProc(var Msg: TMessage); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -323,7 +324,7 @@ constructor TWkeWebbrowser.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FTimer := TTimer.Create(Self);
-  FTimer.Interval := 50;
+  FTimer.Interval := 45;
   FTimer.OnTimer := DoTimer;
 end;
 
@@ -662,6 +663,19 @@ begin
     Message.Result := 0
   else
     inherited;
+end;
+
+procedure TWkeWebbrowser.WndProc(var Msg: TMessage);
+begin
+  case Msg.Msg of 
+  WM_RBUTTONDOWN:
+    begin
+      if Assigned(PopupMenu) then 
+        PopupMenu.Popup(TWMRButtonDown(Msg).XPos, TWMRButtonDown(Msg).YPos);
+    end
+  else
+    inherited WndProc(Msg);
+  end;
 end;
 
 initialization
