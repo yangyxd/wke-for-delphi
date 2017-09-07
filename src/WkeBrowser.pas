@@ -679,11 +679,15 @@ begin
 end;
 
 initialization
-  if Assigned(wkeInitialize) then
-    wkeInitialize;
+  if Assigned(wkeInitialize) then begin
+    try
+      wkeInitialize;
+    except
+    end;
+  end;
 
 finalization
-  if Assigned(wkeFinalize) then    
+  if Assigned(wkeFinalize) then
     wkeFinalize;
 
 end.

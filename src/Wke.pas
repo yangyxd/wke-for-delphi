@@ -28,7 +28,7 @@ interface
   {$DEFINE SupportInline}
 {$IFEND}
 
-{$DEFINE UseVcFastCall}
+{.$DEFINE UseVcFastCall}
 
 uses
   Windows, Types, SysUtils;
@@ -300,7 +300,7 @@ type
   //typedef jsValue (JS_CALL *jsNativeFunction) (jsExecState es);
   // 这里有两种写法，按照vc __fastcall的约定与delphi register约定的不一样
   {$IFDEF UseVcFastCall}
-  jsNativeFunction = function(es: wkeJSState): wkeJSValue; cdecl;
+  jsNativeFunction = function(es: wkeJSState): wkeJSValue; cdecl; 
   {$ELSE}
   //jsNativeFunction = function(p1, p2, es: wkeJSState): wkeJSValue;  // 前两个参数用来占位用
   jsNativeFunction = function(p1, p2, es: wkeJSState): wkeJSValue; cdecl;
@@ -704,6 +704,7 @@ implementation
 var
   DLLHandle: THandle = 0;
 
+
 {$IFDEF UseVcFastCall}
  // 必须放在函数开始的第一行位置，否则会破坏ecx寄存器
 procedure ProcessVcFastCall;
@@ -740,6 +741,8 @@ begin
 
   try
     DLLHandle := LoadLibrary(PChar(DllName));
+    if DLLHandle = 0 then
+      DLLHandle := LoadLibrary(PChar('node.dll'));
     if DLLHandle <> 0 then begin
       @wkeInitialize := GetProcAddressEx(DLLHandle, 'wkeInitialize'); //procedure(); cdecl;
       @wkeInitializeEx := GetProcAddressEx(DLLHandle, 'wkeInitializeEx'); //procedure(settings: PwkeSettings); cdecl;
@@ -925,11 +928,11 @@ begin
       if not Assigned(@wkeGetWebView) then
         @wkeGetWebView := @wkeJSGetWebView;
       if not Assigned(@wkeJSParam) then
-        @wkeJSParam := GetProcAddressEx(DLLHandle, 'jsArg');
+        @wkeJSParam := GetProcAddressEx(DLLHandle, 'wkeJsArg');
       if not Assigned(@wkeJSParamCount) then
-        @wkeJSParamCount := GetProcAddressEx(DLLHandle, 'jsArgCount');
+        @wkeJSParamCount := GetProcAddressEx(DLLHandle, 'wkeJsArgCount');
       if not Assigned(@wkeJSParamType) then
-        @wkeJSParamType := GetProcAddressEx(DLLHandle, 'jsArgType');
+        @wkeJSParamType := GetProcAddressEx(DLLHandle, 'wkeJsArgType');
 
       if not Assigned(@wkeGetVersion) then
         Result := False
