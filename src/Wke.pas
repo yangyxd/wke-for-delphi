@@ -505,6 +505,12 @@ type
     procedure ReleaseRef(v: wkeJSValue); {$IFDEF SupportInline}inline;{$ENDIF}
     procedure CollectGarbge; {$IFDEF SupportInline}inline;{$ENDIF}
     class function ArgToString(const wke: JScript; argIdx: Integer): string;
+    
+    class procedure ClearJsValue(es: wkeJSState; var v: wkeJSValue);
+    class procedure SetJsValue(es: wkeJSState; var v: wkeJSValue; const Value: string); overload;
+    class procedure SetJsValue(es: wkeJSState; var v: wkeJSValue; const Value: Double); overload;
+    class procedure SetJsValue(es: wkeJSState; var v: wkeJSValue; const Value: Int64); overload;
+    class procedure SetJsValue(es: wkeJSState; var v: wkeJSValue; const Value: Boolean); overload;
   end;
 
 {$IFDEF UseVcFastCall}
@@ -1656,6 +1662,35 @@ begin
   else
     Result := '(undefined)';
   end;
+end;
+
+class procedure JScript.ClearJsValue(es: wkeJSState; var v: wkeJSValue);
+begin
+  v := es.String_('');
+end;
+
+class procedure JScript.SetJsValue(es: wkeJSState; var v: wkeJSValue;
+  const Value: Double);
+begin
+  v := es.Double(value);
+end;
+
+class procedure JScript.SetJsValue(es: wkeJSState; var v: wkeJSValue;
+  const Value: string);
+begin
+  v := es.String_(Value);
+end;
+
+class procedure JScript.SetJsValue(es: wkeJSState; var v: wkeJSValue;
+  const Value: Boolean);
+begin
+  v := es.Boolean(Value);
+end;
+
+class procedure JScript.SetJsValue(es: wkeJSState; var v: wkeJSValue;
+  const Value: Int64);
+begin
+  v := es.Int(Integer(Value));
 end;
 
 function JScript.TypeOf(v: wkeJSValue): wkeJSType;
