@@ -1,9 +1,9 @@
 object Form1: TForm1
   Left = 443
   Top = 261
-  Width = 824
-  Height = 492
   Caption = 'Form1'
+  ClientHeight = 454
+  ClientWidth = 808
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -18,6 +18,7 @@ object Form1: TForm1
     Top = 0
     Width = 808
     Height = 454
+    DefaultUrl = 'www.baidu.com'
     Align = alClient
     ParentBackground = False
     TabOrder = 0

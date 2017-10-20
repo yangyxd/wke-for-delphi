@@ -942,8 +942,9 @@ begin
 
       if not Assigned(@wkeGetVersion) then
         Result := False
-      else
-        OutputDebugString(PChar('Wke Version: ' + IntToStr(wkeGetVersion())));
+      else begin
+        //OutputDebugString(PChar('Wke Version: ' + IntToStr(wkeGetVersion())));
+      end;
     end else
       Result := False;    
   except
