@@ -28,6 +28,8 @@ interface
   {$DEFINE SupportInline}
 {$IFEND}
 
+{$WARNINGS OFF}
+
 {.$DEFINE UseVcFastCall}
 
 uses
@@ -734,8 +736,10 @@ begin
       S := 'js' + lpProcName;
       Result := GetProcAddress(hModule, PChar(S));
     end;
+    {$IFNDEF UNICODE}
     if Result = nil then
       OutputDebugString(lpProcName);
+    {$ENDIF}
   end;
 end;
 
