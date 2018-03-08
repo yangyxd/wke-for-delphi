@@ -15,12 +15,27 @@ object Form1: TForm1
   TextHeight = 13
   object WkeWebbrowser1: TWkeWebbrowser
     Left = 0
-    Top = 0
+    Top = 21
     Width = 808
-    Height = 454
+    Height = 433
     DefaultUrl = 'www.baidu.com'
+    OnTitleChanged = WkeWebbrowser1TitleChanged
+    OnURLChanged = WkeWebbrowser1URLChanged
     Align = alClient
     ParentBackground = False
     TabOrder = 0
+    ExplicitTop = 0
+    ExplicitHeight = 454
+  end
+  object Edit1: TEdit
+    Left = 0
+    Top = 0
+    Width = 808
+    Height = 21
+    Align = alTop
+    BorderStyle = bsNone
+    Color = clSilver
+    TabOrder = 1
+    OnKeyPress = Edit1KeyPress
   end
 end
