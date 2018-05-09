@@ -9,8 +9,8 @@ interface
 
 uses
   WkeBrowser, Wke,
-  Windows, Messages, SysUtils, Variants, Classes, Graphics,
-  Controls, Forms, Dialogs;
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs;
 
 type
   TfrmMain = class(TForm)
@@ -25,7 +25,9 @@ type
   end;
 
 function _Test(p1, p2, es_: wkeJSState): wkeJSValue;
+function _Test1(p1, p2, es_: wkeJSState): wkeJSValue; //测试从Html传参数
 function test: String;
+function test1(msg: String): String;
 
 var
   frmMain: TfrmMain;
@@ -39,12 +41,28 @@ begin
   Result := es_.String_(test);
 end;
 
+function _Test1(p1, p2, es_: wkeJSState): wkeJSValue;
+var
+  _msg: String;
+begin
+  _msg := (es_.ArgToString(es_, 0));  // 获取从Html传入的参数
+  Result := es_.String_(test1(_msg));
+end;
+
 function test: String;
 var
   AMsg: string;
 begin
   AMsg := '这是Delphi字符串!!!';
   // ShowMessage(AMsg);
+  Result := AMsg;
+end;
+
+function test1(msg: String): String;
+var
+  AMsg: string;
+begin
+  AMsg := msg + ', 这是Delphi字符串!!!';
   Result := AMsg;
 end;
 
@@ -56,6 +74,7 @@ begin
 
   // 注册本地函数
   JScript.BindFunction('delphi_Test', @_Test, 1);
+  JScript.BindFunction('delphi_Test1', @_Test1, 1);
 end;
 
 procedure TfrmMain.FormDestroy(Sender: TObject);
