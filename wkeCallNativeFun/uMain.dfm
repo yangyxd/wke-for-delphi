@@ -1,0 +1,19 @@
+object frmMain: TfrmMain
+  Left = 0
+  Top = 0
+  Caption = #35843#29992'Delph'#26412#22320#20989#25968
+  ClientHeight = 293
+  ClientWidth = 411
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  OldCreateOrder = False
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnShow = FormShow
+  PixelsPerInch = 96
+  TextHeight = 13
+end
