@@ -570,6 +570,7 @@ var
   wkeSetDirty: procedure(webView: wkeWebView; dirty: Boolean); cdecl;
   wkeIsDirty: function (webView: wkeWebView): Boolean; cdecl;
   wkeAddDirtyArea: procedure(webView: wkeWebView; x: Integer; y: Integer; w: Integer; h: Integer); cdecl;
+  wkeAddPluginDirectory:procedure(webView:wkeWebView; const path:PWideChar);cdecl;
   wkeLayoutIfNeeded: procedure(webView: wkeWebView); cdecl;
   wkePaint: procedure(webView: wkeWebView; bits: Pointer; bufWid: Integer; bufHei: Integer; xDst: Integer; yDst: Integer; w: Integer; h: Integer; xSrc: Integer; ySrc: Integer; bCopyAlpha: Boolean); cdecl;
   wkePaint2: procedure(webView: wkeWebView; bits: Pointer; pitch: Integer); cdecl;
@@ -801,6 +802,7 @@ begin
       @wkeLayoutIfNeeded := GetProcAddressEx(DLLHandle, 'wkeLayoutIfNeeded'); //procedure(webView: wkeWebView); cdecl;
       @wkePaint := GetProcAddressEx(DLLHandle, 'wkePaint'); //procedure(webView: wkeWebView; bits: Pointer; bufWid: Integer; bufHei: Integer; xDst: Integer; yDst: Integer; w: Integer; h: Integer; xSrc: Integer; ySrc: Integer; bCopyAlpha: Boolean); cdecl;
       @wkePaint := GetProcAddressEx(DLLHandle, 'wkePaint'); //procedure2(webView: wkeWebView; bits: Pointer; pitch: Integer); cdecl;
+      @wkeAddPluginDirectory:=GetProcAddressEx(DLLHandle, 'wkeAddPluginDirectory');
       @wkeRepaintIfNeeded := GetProcAddressEx(DLLHandle, 'wkeRepaintIfNeeded'); //procedure(webView: wkeWebView); cdecl;
       @wkeGetViewDC := GetProcAddressEx(DLLHandle, 'wkeGetViewDC'); //function (webView: wkeWebView): HDC; cdecl;
 

@@ -459,8 +459,12 @@ end;
 
 procedure TWkeWebbrowser.DoWindowDestroy;
 begin
-  if Assigned(FOnWindowDestroy) then
-    FOnWindowDestroy(Self);
+  try
+    if Assigned(FOnWindowDestroy) then
+      FOnWindowDestroy(Self);
+    Free;
+  except
+  end;
 end;
 
 procedure TWkeWebbrowser.EditorCopy;
