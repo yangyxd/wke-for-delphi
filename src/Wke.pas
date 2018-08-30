@@ -460,30 +460,30 @@ type
     function ArgCount: Integer; {$IFDEF SupportInline}inline;{$ENDIF}
     function ArgType(argIdx: Integer): wkeJSType; {$IFDEF SupportInline}inline;{$ENDIF}
     function Arg(argIdx: Integer): wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
-    function TypeOf(v: wkeJSValue): wkeJSType; {$IFDEF SupportInline}inline;{$ENDIF}
-    function IsNumber(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
-    function IsString(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
-    function IsBoolean(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
-    function IsObject(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
-    function IsFunction(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
-    function IsUndefined(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
-    function IsNull(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
-    function IsArray(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
-    function IsTrue(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
-    function IsFalse(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function TypeOf(v: wkeJSValue): wkeJSType; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function IsNumber(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function IsString(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function IsBoolean(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function IsObject(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function IsFunction(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function IsUndefined(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function IsNull(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function IsArray(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function IsTrue(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function IsFalse(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
     function ToInt(v: wkeJSValue): Integer; {$IFDEF SupportInline}inline;{$ENDIF}
     function ToFloat(v: wkeJSValue): Single; {$IFDEF SupportInline}inline;{$ENDIF}
     function ToDouble(v: wkeJSValue): Double; {$IFDEF SupportInline}inline;{$ENDIF}
     function ToBoolean(v: wkeJSValue): Boolean; {$IFDEF SupportInline}inline;{$ENDIF}
     function ToTempString(v: wkeJSValue): string; {$IFDEF SupportInline}inline;{$ENDIF}
-    function Int(n: Integer): wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
-    function Float(f: Single): wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
-    function Double(d: Double): wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
-    function Boolean(b: Boolean): wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
-    function Undefined: wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
-    function Null: wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
-    function True_: wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
-    function False_: wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function Int(n: Integer): wkeJSValue;
+    class function Float(f: Single): wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function Double(d: Double): wkeJSValue;
+    class function Boolean(b: Boolean): wkeJSValue;
+    class function Undefined: wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function Null: wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function True_: wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
+    class function False_: wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
     function String_(const AStr: string): wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
     function EmptyObject: wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
     function EmptyArray: wkeJSValue; {$IFDEF SupportInline}inline;{$ENDIF}
@@ -656,31 +656,31 @@ var
   wkeJSParamCount: function (es: wkeJSState): Integer; cdecl;
   wkeJSParamType: function (es: wkeJSState; argIdx: Integer): wkeJSType; cdecl;
   wkeJSParam: function (es: wkeJSState; argIdx: Integer): wkeJSValue; cdecl;
-  wkeJSTypeOf: function (es: wkeJSState; v: wkeJSValue): wkeJSType; cdecl;
-  wkeJSIsNumber: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsString: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsBool: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsObject: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsFunction: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsUndefined: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsNull: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsArray: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsTrue: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsFalse: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+  wkeJSTypeOf: function (v: wkeJSValue): wkeJSType; cdecl;
+  wkeJSIsNumber: function ( v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsString: function ( v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsBoolean: function ( v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsObject: function ( v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsFunction: function ( v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsUndefined: function ( v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsNull: function ( v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsArray: function ( v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsTrue: function ( v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsFalse: function ( v: wkeJSValue): Boolean; cdecl;
   wkeJSToInt: function (es: wkeJSState; v: wkeJSValue): Integer; cdecl;
   wkeJSToFloat: function (es: wkeJSState; v: wkeJSValue): Single; cdecl;
   wkeJSToDouble: function (es: wkeJSState; v: wkeJSValue): Double; cdecl;
-  wkeJSToBool: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+  wkeJSToBoolean: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
   wkeJSToTempString: function (es: wkeJSState; v: wkeJSValue): putf8; cdecl;
   wkeJSToTempStringW: function (es: wkeJSState; v: wkeJSValue): pwchar_t; cdecl;
-  wkeJSInt: function (es: wkeJSState; n: Integer): wkeJSValue; cdecl;
-  wkeJSFloat: function (es: wkeJSState; f: Single): wkeJSValue; cdecl;
-  wkeJSDouble: function (es: wkeJSState; d: Double): wkeJSValue; cdecl;
-  wkeJSBool: function (es: wkeJSState; b: Boolean): wkeJSValue; cdecl;
-  wkeJSUndefined: function (es: wkeJSState): wkeJSValue; cdecl;
-  wkeJSNull: function (es: wkeJSState): wkeJSValue; cdecl;
-  wkeJSTrue: function (es: wkeJSState): wkeJSValue; cdecl;
-  wkeJSFalse: function (es: wkeJSState): wkeJSValue; cdecl;
+  wkeJSInt: function (n: Integer): wkeJSValue; cdecl;
+  wkeJSFloat: function (f: Single): wkeJSValue; cdecl;
+  wkeJSDouble: function (d: Double): wkeJSValue; cdecl;
+  wkeJSBoolean: function (b: Boolean): wkeJSValue; cdecl;
+  wkeJSUndefined: function (): wkeJSValue; cdecl;
+  wkeJSNull: function (): wkeJSValue; cdecl;
+  wkeJSTrue: function (): wkeJSValue; cdecl;
+  wkeJSFalse: function (): wkeJSValue; cdecl;
   wkeJSString: function (es: wkeJSState; str: Putf8): wkeJSValue; cdecl;
   wkeJSStringW: function (es: wkeJSState; str: Pwchar_t): wkeJSValue; cdecl;
   wkeJSEmptyObject: function (es: wkeJSState): wkeJSValue; cdecl;
@@ -888,7 +888,7 @@ begin
       @wkeJSTypeOf := GetProcAddressEx(DLLHandle, 'wkeJSTypeOf'); //function (es: wkeJSState; v: wkeJSValue): wkeJSType; cdecl;
       @wkeJSIsNumber := GetProcAddressEx(DLLHandle, 'wkeJSIsNumber'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
       @wkeJSIsString := GetProcAddressEx(DLLHandle, 'wkeJSIsString'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-      @wkeJSIsBool := GetProcAddressEx(DLLHandle, 'wkeJSIsBool'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+      @wkeJSIsBoolean := GetProcAddressEx(DLLHandle, 'wkeJSIsBoolean'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
       @wkeJSIsObject := GetProcAddressEx(DLLHandle, 'wkeJSIsObject'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
       @wkeJSIsFunction := GetProcAddressEx(DLLHandle, 'wkeJSIsFunction'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
       @wkeJSIsUndefined := GetProcAddressEx(DLLHandle, 'wkeJSIsUndefined'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
@@ -899,13 +899,13 @@ begin
       @wkeJSToInt := GetProcAddressEx(DLLHandle, 'wkeJSToInt'); //function (es: wkeJSState; v: wkeJSValue): Integer; cdecl;
       @wkeJSToFloat := GetProcAddressEx(DLLHandle, 'wkeJSToFloat'); //function (es: wkeJSState; v: wkeJSValue): Single; cdecl;
       @wkeJSToDouble := GetProcAddressEx(DLLHandle, 'wkeJSToDouble'); //function (es: wkeJSState; v: wkeJSValue): Double; cdecl;
-      @wkeJSToBool := GetProcAddressEx(DLLHandle, 'wkeJSToBool'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+      @wkeJSToBoolean := GetProcAddressEx(DLLHandle, 'wkeJSToBoolean'); //function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
       @wkeJSToTempString := GetProcAddressEx(DLLHandle, 'wkeJSToTempString'); //function (es: wkeJSState; v: wkeJSValue): putf8; cdecl;
       @wkeJSToTempStringW := GetProcAddressEx(DLLHandle, 'wkeJSToTempStringW'); //function (es: wkeJSState; v: wkeJSValue): pwchar_t; cdecl;
       @wkeJSInt := GetProcAddressEx(DLLHandle, 'wkeJSInt'); //function (es: wkeJSState; n: Integer): wkeJSValue; cdecl;
       @wkeJSFloat := GetProcAddressEx(DLLHandle, 'wkeJSFloat'); //function (es: wkeJSState; f: Single): wkeJSValue; cdecl;
       @wkeJSDouble := GetProcAddressEx(DLLHandle, 'wkeJSDouble'); //function (es: wkeJSState; d: Double): wkeJSValue; cdecl;
-      @wkeJSBool := GetProcAddressEx(DLLHandle, 'wkeJSBool'); //function (es: wkeJSState; b: Boolean): wkeJSValue; cdecl;
+      @wkeJSBoolean := GetProcAddressEx(DLLHandle, 'wkeJSBoolean'); //function (es: wkeJSState; b: Boolean): wkeJSValue; cdecl;
       @wkeJSUndefined := GetProcAddressEx(DLLHandle, 'wkeJSUndefined'); //function (es: wkeJSState): wkeJSValue; cdecl;
       @wkeJSNull := GetProcAddressEx(DLLHandle, 'wkeJSNull'); //function (es: wkeJSState): wkeJSValue; cdecl;
       @wkeJSTrue := GetProcAddressEx(DLLHandle, 'wkeJSTrue'); //function (es: wkeJSState): wkeJSValue; cdecl;
@@ -1700,59 +1700,59 @@ begin
   v := es.Int(Integer(Value));
 end;
 
-function JScript.TypeOf(v: wkeJSValue): wkeJSType;
+class function JScript.TypeOf(v: wkeJSValue): wkeJSType;
 begin
-  Result := wkeJSTypeOf(Self, v);
+  Result := wkeJSTypeOf(v);
 end;
 
-function JScript.IsNumber(v: wkeJSValue): Boolean;
+class function JScript.IsNumber(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsNumber(Self, v);
+  Result := wkeJSIsNumber(v);
 end;
 
-function JScript.IsString(v: wkeJSValue): Boolean;
+class function JScript.IsString(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsString(Self, v);
+  Result := wkeJSIsString(v);
 end;
 
-function JScript.IsBoolean(v: wkeJSValue): Boolean;
+class function JScript.IsBoolean(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsBool(Self, v);
+  Result := wkeJSIsBoolean(v);
 end;
 
-function JScript.IsObject(v: wkeJSValue): Boolean;
+class function JScript.IsObject(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsObject(Self, v);
+  Result := wkeJSIsObject(v);
 end;
 
-function JScript.IsFunction(v: wkeJSValue): Boolean;
+class function JScript.IsFunction(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsFunction(Self, v);
+  Result := wkeJSIsFunction(v);
 end;
 
-function JScript.IsUndefined(v: wkeJSValue): Boolean;
+class function JScript.IsUndefined(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsUndefined(Self, v);
+  Result := wkeJSIsUndefined(v);
 end;
 
-function JScript.IsNull(v: wkeJSValue): Boolean;
+class function JScript.IsNull(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsNull(Self, v);
+  Result := wkeJSIsNull(v);
 end;
 
-function JScript.IsArray(v: wkeJSValue): Boolean;
+class function JScript.IsArray(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsArray(Self, v);
+  Result := wkeJSIsArray(v);
 end;
 
-function JScript.IsTrue(v: wkeJSValue): Boolean;
+class function JScript.IsTrue(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsTrue(Self, v);
+  Result := wkeJSIsTrue(v);
 end;
 
-function JScript.IsFalse(v: wkeJSValue): Boolean;
+class function JScript.IsFalse(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsFalse(Self, v);
+  Result := wkeJSIsFalse(v);
 end;
 
 function JScript.ToInt(v: wkeJSValue): Integer;
@@ -1772,7 +1772,7 @@ end;
 
 function JScript.ToBoolean(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSToBool(Self, v);
+  Result := wkeJSToBoolean(Self, v);
 end;
 
 function JScript.ToTempString(v: wkeJSValue): string;
@@ -1784,44 +1784,44 @@ begin
   {$ENDIF}
 end;
 
-function JScript.Int(n: Integer): wkeJSValue;
+class function JScript.Int(n: Integer): wkeJSValue;
 begin
-  Result := wkeJSInt(Self, n);
+  Result := wkeJSInt(n);
 end;
 
-function JScript.Float(f: Single): wkeJSValue;
+class function JScript.Float(f: Single): wkeJSValue;
 begin
-  Result := wkeJSFloat(Self, f);
+  Result := wkeJSFloat(f);
 end;
 
-function JScript.Double(d: Double): wkeJSValue;
+class function JScript.Double(d: Double): wkeJSValue;
 begin
-  Result := wkeJSDouble(Self, d);
+  Result := wkeJSDouble(d);
 end;
 
-function JScript.Boolean(b: Boolean): wkeJSValue;
+class function JScript.Boolean(b: Boolean): wkeJSValue;
 begin
-  Result := wkeJSBool(Self, b);
+  Result := wkeJSBoolean(b);
 end;
 
-function JScript.Undefined: wkeJSValue;
+class function JScript.Undefined: wkeJSValue;
 begin
-  Result := wkeJSUndefined(self);
+  Result := wkeJSUndefined();
 end;
 
-function JScript.Null: wkeJSValue;
+class function JScript.Null: wkeJSValue;
 begin
-  Result := wkeJSNull(Self);
+  Result := wkeJSNull();
 end;
 
-function JScript.True_: wkeJSValue;
+class function JScript.True_: wkeJSValue;
 begin
-  Result := wkeJSTrue(Self);
+  Result := wkeJSTrue();
 end;
 
-function JScript.False_: wkeJSValue;
+class function JScript.False_: wkeJSValue;
 begin
-  Result := wkeJSFalse(Self);
+  Result := wkeJSFalse();
 end;
 
 function JScript.String_(const AStr: string): wkeJSValue;

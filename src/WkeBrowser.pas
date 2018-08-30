@@ -342,6 +342,7 @@ end;
 
 destructor TWkeWebbrowser.Destroy;
 begin
+  FWebView.SetOnWindowDestroy(nil, nil);
   inherited Destroy;
 end;
 
