@@ -296,6 +296,7 @@ end;
 procedure OnwkeLoadingFinishCallback(webView: wkeWebView; param: Pointer; url: wkeString;
   result: wkeLoadingResult; failedReason: wkeString); cdecl;
 begin
+  FUrl := AUrl;
   TWkeWebbrowser(param).DoLoadingFinish(webView.GetString(url),
     result, webView.GetString(failedReason));
 end;
