@@ -1,11 +1,11 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <ProjectGuid>{24d817b7-c9f6-4fcb-b128-65b690fc0d5f}</ProjectGuid>
+    <ProjectGuid>{97b91213-3878-445e-9bfb-7ee09588af2d}</ProjectGuid>
     <MainSource>YxdWekPackage.dpk</MainSource>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
-    <DCC_DependencyCheckOutputName>..\bin\YxdWekPackage.bpl</DCC_DependencyCheckOutputName>
+    <DCC_DependencyCheckOutputName>C:\Users\Public\Documents\RAD Studio\5.0\Bpl\YxdWekPackage.bpl</DCC_DependencyCheckOutputName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <Version>7.0</Version>
@@ -16,11 +16,6 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Version>7.0</Version>
-    <DCC_BplOutput>..\bin</DCC_BplOutput>
-    <DCC_DcuOutput>..\dcu</DCC_DcuOutput>
-    <DCC_ObjOutput>..\dcu</DCC_ObjOutput>
-    <DCC_HppOutput>..\dcu</DCC_HppOutput>
-    <DCC_DcpOutput>..\dcu</DCC_DcpOutput>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>
@@ -36,8 +31,8 @@
     <DelphiCompile Include="YxdWekPackage.dpk">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
-    <DCCReference Include="d:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\rtl.dcp" />
-    <DCCReference Include="d:\Program Files (x86)\CodeGear\RAD Studio\5.0\bin\vcl.dcp" />
+    <DCCReference Include="D:\Program Files\MiniSoft\SoftTool\rtl.dcp" />
+    <DCCReference Include="D:\Program Files\MiniSoft\SoftTool\vcl.dcp" />
     <DCCReference Include="Wke.pas" />
     <DCCReference Include="WkeBrowser.pas" />
   </ItemGroup>

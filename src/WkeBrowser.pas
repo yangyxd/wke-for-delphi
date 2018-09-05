@@ -29,7 +29,7 @@ unit WkeBrowser;
 interface
 
 uses
-  Wke,
+  Wke, Graphics,
   Windows, Types, Messages, Classes, SysUtils, Controls, Dialogs, ExtCtrls;
 
 type
@@ -61,6 +61,7 @@ type
     FTimer: TTimer;
     FUserAgent: string;
     FDefaultUrl: string;
+    FUrl: string;
     // FIsLayered: Boolean;
     // FNativeCtrl: CNativeControlUI;
 
@@ -78,7 +79,9 @@ type
     FOnURLChanged: TURLChangedEvent;
     FOnConsoleMessage: TConsoleMessageEvent;
     FOnDownload: TDownloadEvent;
-
+    FOnPaste: TNotifyEvent;
+    FAfterCreateView: TNotifyEvent;
+    
     procedure SetUserAgent(const Value: string);
     procedure SetDefaultUrl(const Value: string);
 //    procedure OnWebBrowserPaint(Sender: CControlUI; DC: HDC; const rcPaint: TRect);
@@ -99,12 +102,16 @@ type
     procedure DoConsoleMessage(var AMessage: wkeConsoleMessage); virtual;
     procedure DoTimer(Sender: TObject); 
     procedure InitWkeWebBrowser();
-  protected   
+  protected
+    FWkeWndProc: Pointer;
+    FDefaultUrlLoaded: Boolean;
     procedure Resize; override;
     procedure CreateWnd; override;
     procedure DestroyWnd; override;
+    procedure DestroyWindowHandle; override;
     procedure WMEraseBkgnd(var Message: TWmEraseBkgnd); message WM_ERASEBKGND;
     procedure WndProc(var Msg: TMessage); override;
+    procedure CheckDefaultUrlLoaded; {$IFDEF USEINLINE}inline; {$ENDIF}
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -157,6 +164,9 @@ type
     property OnWindowDestroy: TNotifyEvent read FOnWindowDestroy write FOnWindowDestroy;
     property OnConsoleMessage: TConsoleMessageEvent read FOnConsoleMessage write FOnConsoleMessage;
     property OnDownload: TDownloadEvent read FOnDownload write FOnDownload;
+    property OnPaste: TNotifyEvent read FOnPaste write FOnPaste;
+    property AfterCreateView: TNotifyEvent read FAfterCreateView write FAfterCreateView;
+    property Url: String read FUrl;
   published
     property Align;
     property Anchors;
@@ -211,6 +221,9 @@ type
 procedure Register;
 
 implementation
+
+resourcestring
+  SWkeNotInitialized = 'WkeBrowse initialize failured.Maybe library dll missed.';
 
 procedure Register;
 begin
@@ -320,9 +333,19 @@ begin
     Result := False;
 end;
 
+procedure TWkeWebbrowser.CheckDefaultUrlLoaded;
+begin
+  if (FDefaultUrl <> '') and Assigned(FWebView) and Visible and (not FDefaultUrlLoaded) then
+  begin
+    FDefaultUrlLoaded := true;
+    FWebView.LoadURL(FDefaultUrl);
+  end;
+end;
+
 constructor TWkeWebbrowser.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  ControlStyle := [csClickEvents, csSetCaption, csDoubleClicks{$IFDEF USEINLINE}, csPannable{$ENDIF}];
   FTimer := TTimer.Create(Self);
   FTimer.Interval := 45;
   FTimer.OnTimer := DoTimer;
@@ -330,26 +353,43 @@ end;
 
 procedure TWkeWebbrowser.CreateWnd;
 begin
-  inherited CreateWnd;
-  if HandleAllocated then begin
-    InitWkeWebBrowser();
-    FTimer.Enabled := Assigned(FWebView);
-    if FDefaultUrl <> '' then begin
-      LoadURL(FDefaultUrl);
+  if csDesigning in ComponentState then
+    inherited
+  else begin
+    inherited CreateWnd;
+    if HandleAllocated then begin
+      InitWkeWebBrowser();
+      if Assigned(FWebView) then begin
+        WindowHandle := WkeGetWindowHandle(FWebView);
+        FWkeWndProc := Pointer(SetWindowLong(WindowHandle, GWL_WNDPROC, Integer(MakeObjectInstance(WndProc))));
+        // Text := Application.Title;
+        if Assigned(AfterCreateView) then
+          AfterCreateView(Self);
+        FTimer.Enabled := True;
+        CheckDefaultUrlLoaded;
+      end else
+        raise Exception.Create(SWkeNotInitialized);
     end;
   end;
 end;
 
 destructor TWkeWebbrowser.Destroy;
 begin
+  if Assigned(FWebView) then
+    FWebView.SetOnWindowDestroy(nil, nil);
   inherited Destroy;
+end;
+
+procedure TWkeWebbrowser.DestroyWindowHandle;
+begin
+  if Assigned(FWebView) then
+    FWebView.DestroyWebWindow;
+  inherited;
 end;
 
 procedure TWkeWebbrowser.DestroyWnd;
 begin
   FTimer.Enabled := False;
-  if Assigned(FWebView) then
-    FWebView.DestroyWebWindow;
   inherited DestroyWnd;
 end;
 
@@ -367,7 +407,7 @@ begin
   if Assigned(FOnConfirmBox) then
     FOnConfirmBox(Self, AMsg, Result)
   else begin
-    Result := MessageBox(Handle, PChar(AMsg), 'Confirm', 64+4) = 6;
+    Result := MessageBox(Handle, PChar(AMsg), 'Confirm', 64 + MB_OKCANCEL) = IDOK;
   end;
 end;
 
@@ -434,7 +474,7 @@ end;
 
 procedure TWkeWebbrowser.DoTimer(Sender: TObject);
 begin
-  if Visible and Assigned(FWebView) then  
+  if Visible and Assigned(FWebView) then
     RepaintAllNeeded;
 end;
 
@@ -525,7 +565,7 @@ procedure TWkeWebbrowser.InitWkeWebBrowser();
 begin
   if not Assigned(wkeCreateWebWindow) then
     Exit;
-  FWebView := wkeCreateWebWindow(WKE_WINDOW_TYPE_CONTROL, Handle, 0, 0, Width, Height);
+  FWebView := wkeCreateWebWindow(WKE_WINDOW_TYPE_CONTROL, Parent.Handle, 0, 0, Width, Height);
   FWebView.SetOnTitleChanged(OnwkeTitleChangedCallback, Self);
   FWebView.SetOnURLChanged(OnwkeURLChangedCallback, Self);
   //FWebView.SetOnPaintUpdated(OnwkePaintUpdatedCallback, Self);
@@ -541,6 +581,7 @@ begin
   FWebView.SetOnConsoleMessage(OnwkeConsoleMessageCallback, Self);
   //FWebView.SetOnDownload(OnwkeDownloadCallback, Self);
   //FWebView.DefaultHandler(0, 0, ClientWidth, ClientHeight);
+  if FUserAgent <> '' then FWebView.UserAgent := FUserAgent;
 end;
 
 function TWkeWebbrowser.IsAwake: Boolean;
@@ -623,7 +664,11 @@ end;
 
 procedure TWkeWebbrowser.SetDefaultUrl(const Value: string);
 begin
-  FDefaultUrl := Value;
+  if FDefaultUrl <> Value then begin
+    FDefaultUrl := Value;
+    FDefaultUrlLoaded := False;
+    CheckDefaultUrlLoaded;
+  end;
 end;
 
 procedure TWkeWebbrowser.SetFocus;
@@ -636,10 +681,9 @@ end;
 procedure TWkeWebbrowser.SetUserAgent(const Value: string);
 begin
   if FUserAgent <> Value then begin
-    if Assigned(FWebView) then begin
-      FUserAgent := Value;
+    FUserAgent := Value;
+    if Assigned(FWebView) then
       FWebView.UserAgent := FUserAgent;
-    end;
   end;
 end;
 
@@ -669,16 +713,118 @@ begin
     inherited;
 end;
 
-procedure TWkeWebbrowser.WndProc(var Msg: TMessage);
+function KeyDataToShiftState(KeyData: Longint): TShiftState;
+const
+  AltMask = $20000000;
+{$IFDEF LINUX}
+  CtrlMask = $10000000;
+  ShiftMask = $08000000;
+{$ENDIF}
 begin
-  case Msg.Msg of 
-  WM_RBUTTONDOWN:
-    begin
-      if Assigned(PopupMenu) then 
-        PopupMenu.Popup(TWMRButtonDown(Msg).XPos, TWMRButtonDown(Msg).YPos);
-    end
-  else
+  Result := [];
+  if GetKeyState(VK_SHIFT) < 0 then Include(Result, ssShift);
+  if GetKeyState(VK_CONTROL) < 0 then Include(Result, ssCtrl);
+  if KeyData and AltMask <> 0 then Include(Result, ssAlt);
+{$IFDEF LINUX}
+  if KeyData and CtrlMask <> 0 then Include(Result, ssCtrl);
+  if KeyData and ShiftMask <> 0 then Include(Result, ssShift);
+{$ENDIF}
+end;
+
+procedure TWkeWebbrowser.WndProc(var Msg: TMessage);
+
+  procedure CheckPaste;
+  var
+    ShiftState: TShiftState;
+  begin
+    with TWMKey(Msg) do begin
+      ShiftState := KeyDataToShiftState(KeyData);
+      if not(csNoStdEvents in ControlStyle) then begin
+        if (ssCtrl in ShiftState) and (CharCode = Ord('V')) then begin
+          if Assigned(OnPaste) then begin
+            try
+              OnPaste(Self);
+            except
+            end;
+            CharCode := 0;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  procedure PaintDesignStyle;
+  var
+    ADC: THandle;
+    PS: TPaintStruct;
+    AFrameBrush: HBRUSH;
+    R: TRect;
+    ADrawStyle: Integer;
+  begin
+    ADC := BeginPaint(Handle, PS);
+    try
+      R := ClientRect;
+      AFrameBrush := CreateSolidBrush(ColorToRGB(clWindow));
+      FillRect(ADC, R, AFrameBrush);
+      DeleteObject(AFrameBrush);
+      ADrawStyle := DT_LEFT or DT_EXPANDTABS or DT_NOCLIP;
+      DrawText(ADC, PChar(Name), Length(Name), R, ADrawStyle or DT_CALCRECT);
+      OffsetRect(R, (Width - (R.Right - R.Left)) shr 1, (Height - (R.Bottom - R.Top)) shr 1);
+      DrawText(ADC, PChar(Name), Length(Name), R, ADrawStyle);
+    finally
+      EndPaint(Handle, PS);
+    end;
+  end;
+
+  procedure DoPopupMenu();
+  var
+    PT: TPoint;
+  begin
+    PT := Point(TWMRButtonDown(Msg).XPos, TWMRButtonDown(Msg).YPos);
+    PT := ClientToScreen(PT);
+    PopupMenu.Popup(PT.X, PT.Y);
+  end;
+
+begin
+  if (Msg.Msg = WM_PAINT) then begin
+    if (csDesigning in ComponentState) then begin
+      PaintDesignStyle;
+      Exit;
+    end;
+  end;
+
+  if (Msg.Msg >= CM_BASE) or (not Assigned(FWkeWndProc)) then begin
     inherited WndProc(Msg);
+  end else begin
+    if (Msg.Msg >= WM_KEYFIRST) AND (Msg.Msg <= WM_KEYLAST) then begin
+      if Msg.Msg = WM_KEYUP then
+        CheckPaste;
+      inherited WndProc(Msg);
+    end else begin
+      case Msg.Msg of
+        WM_RBUTTONUP:
+          if Assigned(PopupMenu) then begin
+            DoPopupMenu();
+            Exit;
+          end;
+        WM_GETDLGCODE:
+          begin
+            Msg.Result := DLGC_WANTALLKEYS or DLGC_WANTCHARS or DLGC_WANTARROWS or DLGC_WANTTAB;
+            Exit;
+          end;
+        WM_SETFOCUS:
+          begin
+            inherited WndProc(Msg);
+            Exit;
+          end;
+        WM_PASTE:
+          begin
+            CheckPaste; // wke没处理这个消息，程序加上处理
+            Exit;
+          end;
+      end;
+    end;
+    Msg.Result := CallWindowProc(FWkeWndProc, Handle, Msg.Msg, Msg.WParam, Msg.LParam);
   end;
 end;
 

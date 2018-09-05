@@ -32,6 +32,8 @@ interface
 
 {.$DEFINE UseVcFastCall}
 
+{$DEFINE UseMB2018}  // 使用2018年新的mb链接库dll如果异常，启用这个
+
 uses
   Windows, Types, SysUtils;
 
@@ -123,6 +125,19 @@ type
     JSTYPE_UNDEFINED
   );
   TwkeJSType = wkeJSType;
+
+  PwkeJsExceptionInfo = ^wkeJsExceptionInfo;
+  wkeJsExceptionInfo = packed record
+    Message: PUTF8;
+    SourceLine: PUTF8;
+    ScriptResourceName: PUTF8;
+    LineNumber: Integer;
+    StartPosition: Integer;
+    EndPosition: Integer;
+    StartColumn: Integer;
+    EndColumn: Integer;
+    CallStackString: PUTF8;
+  end;
 
   wkeRect = packed record
     x: Integer;
@@ -656,31 +671,31 @@ var
   wkeJSParamCount: function (es: wkeJSState): Integer; cdecl;
   wkeJSParamType: function (es: wkeJSState; argIdx: Integer): wkeJSType; cdecl;
   wkeJSParam: function (es: wkeJSState; argIdx: Integer): wkeJSValue; cdecl;
-  wkeJSTypeOf: function (es: wkeJSState; v: wkeJSValue): wkeJSType; cdecl;
-  wkeJSIsNumber: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsString: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsBool: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsObject: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsFunction: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsUndefined: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsNull: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsArray: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsTrue: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
-  wkeJSIsFalse: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
+  wkeJSTypeOf: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} v: wkeJSValue): wkeJSType; cdecl;
+  wkeJSIsNumber: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsString: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsBool: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsObject: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsFunction: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsUndefined: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsNull: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsArray: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsTrue: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} v: wkeJSValue): Boolean; cdecl;
+  wkeJSIsFalse: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} v: wkeJSValue): Boolean; cdecl;
   wkeJSToInt: function (es: wkeJSState; v: wkeJSValue): Integer; cdecl;
   wkeJSToFloat: function (es: wkeJSState; v: wkeJSValue): Single; cdecl;
   wkeJSToDouble: function (es: wkeJSState; v: wkeJSValue): Double; cdecl;
   wkeJSToBool: function (es: wkeJSState; v: wkeJSValue): Boolean; cdecl;
   wkeJSToTempString: function (es: wkeJSState; v: wkeJSValue): putf8; cdecl;
   wkeJSToTempStringW: function (es: wkeJSState; v: wkeJSValue): pwchar_t; cdecl;
-  wkeJSInt: function (es: wkeJSState; n: Integer): wkeJSValue; cdecl;
-  wkeJSFloat: function (es: wkeJSState; f: Single): wkeJSValue; cdecl;
-  wkeJSDouble: function (es: wkeJSState; d: Double): wkeJSValue; cdecl;
-  wkeJSBool: function (es: wkeJSState; b: Boolean): wkeJSValue; cdecl;
-  wkeJSUndefined: function (es: wkeJSState): wkeJSValue; cdecl;
-  wkeJSNull: function (es: wkeJSState): wkeJSValue; cdecl;
-  wkeJSTrue: function (es: wkeJSState): wkeJSValue; cdecl;
-  wkeJSFalse: function (es: wkeJSState): wkeJSValue; cdecl;
+  wkeJSInt: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} n: Integer): wkeJSValue; cdecl;
+  wkeJSFloat: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} f: Single): wkeJSValue; cdecl;
+  wkeJSDouble: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} d: Double): wkeJSValue; cdecl;
+  wkeJSBool: function ({$IFNDEF UseMB2018}es: wkeJSState;{$ENDIF} b: Boolean): wkeJSValue; cdecl;
+  wkeJSUndefined: function ({$IFNDEF UseMB2018}es: wkeJSState{$ENDIF}): wkeJSValue; cdecl;
+  wkeJSNull: function ({$IFNDEF UseMB2018}es: wkeJSState{$ENDIF}): wkeJSValue; cdecl;
+  wkeJSTrue: function ({$IFNDEF UseMB2018}es: wkeJSState{$ENDIF}): wkeJSValue; cdecl;
+  wkeJSFalse: function ({$IFNDEF UseMB2018}es: wkeJSState{$ENDIF}): wkeJSValue; cdecl;
   wkeJSString: function (es: wkeJSState; str: Putf8): wkeJSValue; cdecl;
   wkeJSStringW: function (es: wkeJSState; str: Pwchar_t): wkeJSValue; cdecl;
   wkeJSEmptyObject: function (es: wkeJSState): wkeJSValue; cdecl;
@@ -1702,57 +1717,57 @@ end;
 
 function JScript.TypeOf(v: wkeJSValue): wkeJSType;
 begin
-  Result := wkeJSTypeOf(Self, v);
+  Result := wkeJSTypeOf({$IFNDEF UseMB2018}Self, {$ENDIF}v);
 end;
 
 function JScript.IsNumber(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsNumber(Self, v);
+  Result := wkeJSIsNumber({$IFNDEF UseMB2018}Self, {$ENDIF}v);
 end;
 
 function JScript.IsString(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsString(Self, v);
+  Result := wkeJSIsString({$IFNDEF UseMB2018}Self, {$ENDIF}v);
 end;
 
 function JScript.IsBoolean(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsBool(Self, v);
+  Result := wkeJSIsBool({$IFNDEF UseMB2018}Self, {$ENDIF}v);
 end;
 
 function JScript.IsObject(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsObject(Self, v);
+  Result := wkeJSIsObject({$IFNDEF UseMB2018}Self, {$ENDIF}v);
 end;
 
 function JScript.IsFunction(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsFunction(Self, v);
+  Result := wkeJSIsFunction({$IFNDEF UseMB2018}Self, {$ENDIF}v);
 end;
 
 function JScript.IsUndefined(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsUndefined(Self, v);
+  Result := wkeJSIsUndefined({$IFNDEF UseMB2018}Self, {$ENDIF}v);
 end;
 
 function JScript.IsNull(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsNull(Self, v);
+  Result := wkeJSIsNull({$IFNDEF UseMB2018}Self, {$ENDIF}v);
 end;
 
 function JScript.IsArray(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsArray(Self, v);
+  Result := wkeJSIsArray({$IFNDEF UseMB2018}Self, {$ENDIF}v);
 end;
 
 function JScript.IsTrue(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsTrue(Self, v);
+  Result := wkeJSIsTrue({$IFNDEF UseMB2018}Self, {$ENDIF}v);
 end;
 
 function JScript.IsFalse(v: wkeJSValue): Boolean;
 begin
-  Result := wkeJSIsFalse(Self, v);
+  Result := wkeJSIsFalse({$IFNDEF UseMB2018}Self, {$ENDIF}v);
 end;
 
 function JScript.ToInt(v: wkeJSValue): Integer;
@@ -1786,42 +1801,42 @@ end;
 
 function JScript.Int(n: Integer): wkeJSValue;
 begin
-  Result := wkeJSInt(Self, n);
+  Result := wkeJSInt({$IFNDEF UseMB2018}Self, {$ENDIF}n);
 end;
 
 function JScript.Float(f: Single): wkeJSValue;
 begin
-  Result := wkeJSFloat(Self, f);
+  Result := wkeJSFloat({$IFNDEF UseMB2018}Self, {$ENDIF}f);
 end;
 
 function JScript.Double(d: Double): wkeJSValue;
 begin
-  Result := wkeJSDouble(Self, d);
+  Result := wkeJSDouble({$IFNDEF UseMB2018}Self, {$ENDIF}d);
 end;
 
 function JScript.Boolean(b: Boolean): wkeJSValue;
 begin
-  Result := wkeJSBool(Self, b);
+  Result := wkeJSBool({$IFNDEF UseMB2018}Self, {$ENDIF}b);
 end;
 
 function JScript.Undefined: wkeJSValue;
 begin
-  Result := wkeJSUndefined(self);
+  Result := wkeJSUndefined({$IFNDEF UseMB2018}Self{$ENDIF});
 end;
 
 function JScript.Null: wkeJSValue;
 begin
-  Result := wkeJSNull(Self);
+  Result := wkeJSNull({$IFNDEF UseMB2018}Self{$ENDIF});
 end;
 
 function JScript.True_: wkeJSValue;
 begin
-  Result := wkeJSTrue(Self);
+  Result := wkeJSTrue({$IFNDEF UseMB2018}Self{$ENDIF});
 end;
 
 function JScript.False_: wkeJSValue;
 begin
-  Result := wkeJSFalse(Self);
+  Result := wkeJSFalse({$IFNDEF UseMB2018}Self{$ENDIF});
 end;
 
 function JScript.String_(const AStr: string): wkeJSValue;
